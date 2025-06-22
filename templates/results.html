@@ -1,0 +1,498 @@
+{% extends "base.html" %}
+
+{% block title %}Analiz Sonuçları - eBay Dropshipping Spy{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Loading Section -->
+    <div id="loadingSection" class="text-center">
+        <div class="spinner-border text-primary me-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <h4>Sonuçlar yükleniyor...</h4>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultsSection" style="display: none;">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-chart-bar me-2"></i>Analiz Sonuçları</h2>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary" onclick="location.href='/'">
+                    <i class="fas fa-arrow-left me-2"></i>Yeni Analiz
+                </button>
+                <button class="btn btn-outline-success" onclick="exportResults()">
+                    <i class="fas fa-download me-2"></i>Excel'e Aktar
+                </button>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row mb-4" id="summaryCards">
+            <!-- Summary cards will be populated by JavaScript -->
+        </div>
+
+        <!-- Filters and Controls -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtreler ve Sıralama</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="sortBy" class="form-label">Sıralama</label>
+                        <select class="form-select" id="sortBy" onchange="sortResults()">
+                            <option value="profit_desc">Kar Marjı (Yüksek→Düşük)</option>
+                            <option value="profit_asc">Kar Marjı (Düşük→Yüksek)</option>
+                            <option value="ebay_sales_desc">eBay Satış Sayısı (Çok→Az)</option>
+                            <option value="ebay_sales_asc">eBay Satış Sayısı (Az→Çok)</option>
+                            <option value="seller_feedback_desc">Satıcı Puanı (Yüksek→Düşük)</option>
+                            <option value="seller_feedback_asc">Satıcı Puanı (Düşük→Yüksek)</option>
+                            <option value="seller_count_desc">Satıcı Satış Sayısı (Çok→Az)</option>
+                            <option value="seller_count_asc">Satıcı Satış Sayısı (Az→Çok)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="minProfitFilter" class="form-label">Min Kar Marjı (%)</label>
+                        <input type="number" class="form-control" id="minProfitFilter" 
+                               placeholder="50" onchange="filterResults()">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="maxSellerSales" class="form-label">Max Satıcı Satış Sayısı</label>
+                        <input type="number" class="form-control" id="maxSellerSales" 
+                               placeholder="Küçük satıcılar için" onchange="filterResults()">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="viewMode" class="form-label">Görünüm</label>
+                        <select class="form-select" id="viewMode" onchange="changeViewMode()">
+                            <option value="cards">Kart Görünümü</option>
+                            <option value="table">Tablo Görünümü</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="topRatedOnly" onchange="filterResults()">
+                            <label class="form-check-label" for="topRatedOnly">
+                                Sadece Top Rated Satıcılar
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="smallSellersOnly" onchange="filterResults()">
+                            <label class="form-check-label" for="smallSellersOnly">
+                                Sadece Küçük Satıcılar (&lt;1000 satış)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Count -->
+        <div class="mb-3">
+            <span class="badge bg-primary fs-6" id="resultsCount">0 sonuç</span>
+        </div>
+
+        <!-- Results Display -->
+        <div id="cardsView">
+            <div class="row" id="resultsCards">
+                <!-- Results cards will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <div id="tableView" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>eBay Ürün</th>
+                            <th>eBay Fiyat</th>
+                            <th>Amazon Fiyat</th>
+                            <th>Kar Marjı</th>
+                            <th>Kar ($)</th>
+                            <th>Satıcı</th>
+                            <th>Satış Sayısı</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTable">
+                        <!-- Results table rows will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- No Results Message -->
+        <div id="noResults" style="display: none;" class="text-center py-5">
+            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <h4>Filtrelere uygun sonuç bulunamadı</h4>
+            <p class="text-muted">Filtre ayarlarınızı değiştirip tekrar deneyin.</p>
+        </div>
+    </div>
+
+    <!-- Error Section -->
+    <div id="errorSection" style="display: none;" class="text-center py-5">
+        <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+        <h4>Sonuçlar yüklenirken hata oluştu</h4>
+        <p class="text-muted" id="errorMessage"></p>
+        <button class="btn btn-primary" onclick="location.href='/'">
+            <i class="fas fa-arrow-left me-2"></i>Ana Sayfaya Dön
+        </button>
+    </div>
+</div>
+
+<script>
+let allResults = [];
+let filteredResults = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadResults();
+});
+
+function loadResults() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const categoryId = urlParams.get('category') || 'demo';
+    
+    let url = categoryId === 'demo' ? '/api/demo-data' : `/results/${categoryId}`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                showError(data.error);
+            } else {
+                allResults = data.matches || [];
+                filteredResults = [...allResults];
+                displayResults(data);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading results:', error);
+            showError('Sonuçlar yüklenirken bir hata oluştu: ' + error.message);
+        });
+}
+
+function displayResults(data) {
+    document.getElementById('loadingSection').style.display = 'none';
+    document.getElementById('resultsSection').style.display = 'block';
+    
+    // Display summary
+    displaySummary(data.summary);
+    
+    // Display results
+    updateResultsDisplay();
+}
+
+function displaySummary(summary) {
+    const summaryCards = document.getElementById('summaryCards');
+    summaryCards.innerHTML = `
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-shopping-cart fa-2x mb-2"></i>
+                    <h4>${summary.total_ebay_products || 0}</h4>
+                    <p class="mb-0">eBay Ürünü</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-link fa-2x mb-2"></i>
+                    <h4>${summary.total_matches || 0}</h4>
+                    <p class="mb-0">Amazon Eşleşmesi</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-percentage fa-2x mb-2"></i>
+                    <h4>${summary.average_profit_margin ? summary.average_profit_margin.toFixed(1) : 0}%</h4>
+                    <p class="mb-0">Ortalama Kar Marjı</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-dollar-sign fa-2x mb-2"></i>
+                    <h4>$${summary.total_potential_profit ? summary.total_potential_profit.toFixed(2) : 0}</h4>
+                    <p class="mb-0">Toplam Potansiyel Kar</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function updateResultsDisplay() {
+    const viewMode = document.getElementById('viewMode').value;
+    
+    if (viewMode === 'cards') {
+        document.getElementById('cardsView').style.display = 'block';
+        document.getElementById('tableView').style.display = 'none';
+        displayCardsView();
+    } else {
+        document.getElementById('cardsView').style.display = 'none';
+        document.getElementById('tableView').style.display = 'block';
+        displayTableView();
+    }
+    
+    // Update results count
+    document.getElementById('resultsCount').textContent = `${filteredResults.length} sonuç`;
+    
+    // Show/hide no results message
+    if (filteredResults.length === 0) {
+        document.getElementById('noResults').style.display = 'block';
+    } else {
+        document.getElementById('noResults').style.display = 'none';
+    }
+}
+
+function displayCardsView() {
+    const container = document.getElementById('resultsCards');
+    container.innerHTML = '';
+    
+    filteredResults.forEach((match, index) => {
+        const card = createResultCard(match, index);
+        container.appendChild(card);
+    });
+}
+
+function createResultCard(match, index) {
+    const col = document.createElement('div');
+    col.className = 'col-lg-6 col-xl-4 mb-4';
+    
+    const profitMargin = match.match_details.profit_margin_percent;
+    const profitColor = profitMargin >= 100 ? 'success' : profitMargin >= 50 ? 'warning' : 'danger';
+    
+    col.innerHTML = `
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-${profitColor} text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">#${index + 1}</h6>
+                    <span class="badge bg-light text-dark">
+                        %${profitMargin.toFixed(1)} kar
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <h6 class="card-title text-truncate" title="${match.ebay.title}">
+                    ${match.ebay.title}
+                </h6>
+                
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="text-muted small">eBay</div>
+                            <div class="fw-bold text-primary">$${match.ebay.price}</div>
+                            <div class="small">${match.ebay.sold_count} satış</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="text-muted small">Amazon</div>
+                            <div class="fw-bold text-success">$${match.amazon.price}</div>
+                            <div class="small">${match.amazon.prime ? '<i class="fab fa-amazon text-warning"></i> Prime' : ''}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${match.ebay.seller_info ? `
+                <div class="mb-3">
+                    <div class="small text-muted">Satıcı Bilgileri</div>
+                    <div class="d-flex justify-content-between">
+                        <span class="small">
+                            <strong>${match.ebay.seller_info.username}</strong>
+                            ${match.ebay.seller_info.is_top_rated ? '<i class="fas fa-star text-warning" title="Top Rated"></i>' : ''}
+                        </span>
+                        <span class="small">
+                            ${match.ebay.seller_info.feedback_percentage}% (${match.ebay.seller_info.feedback_count})
+                        </span>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <div class="mb-3">
+                    <div class="small text-muted">Kar Analizi</div>
+                    <div class="d-flex justify-content-between">
+                        <span>Potansiyel Kar:</span>
+                        <span class="fw-bold text-${profitColor}">$${match.match_details.potential_profit}</span>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-6">
+                        <a href="${match.ebay.url}" class="btn btn-outline-primary btn-sm w-100" target="_blank">
+                            <i class="fab fa-ebay me-1"></i>eBay'de Gör
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="${match.amazon.url}" class="btn btn-outline-success btn-sm w-100" target="_blank">
+                            <i class="fab fa-amazon me-1"></i>Amazon'da Gör
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    return col;
+}
+
+function displayTableView() {
+    const tbody = document.getElementById('resultsTable');
+    tbody.innerHTML = '';
+    
+    filteredResults.forEach((match, index) => {
+        const row = createResultRow(match, index);
+        tbody.appendChild(row);
+    });
+}
+
+function createResultRow(match, index) {
+    const tr = document.createElement('tr');
+    
+    const profitMargin = match.match_details.profit_margin_percent;
+    const profitClass = profitMargin >= 100 ? 'text-success' : profitMargin >= 50 ? 'text-warning' : 'text-danger';
+    
+    tr.innerHTML = `
+        <td>
+            <div class="d-flex align-items-center">
+                <img src="${match.ebay.image_url || '/static/placeholder.png'}" 
+                     class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                <div>
+                    <div class="fw-bold text-truncate" style="max-width: 200px;" title="${match.ebay.title}">
+                        ${match.ebay.title}
+                    </div>
+                    <small class="text-muted">${match.ebay.sold_count} satış</small>
+                </div>
+            </div>
+        </td>
+        <td class="fw-bold text-primary">$${match.ebay.price}</td>
+        <td class="fw-bold text-success">$${match.amazon.price}</td>
+        <td class="${profitClass} fw-bold">${profitMargin.toFixed(1)}%</td>
+        <td class="${profitClass} fw-bold">$${match.match_details.potential_profit}</td>
+        <td>
+            ${match.ebay.seller_info ? `
+                <div class="small">
+                    <strong>${match.ebay.seller_info.username}</strong>
+                    ${match.ebay.seller_info.is_top_rated ? '<i class="fas fa-star text-warning"></i>' : ''}
+                    <br>
+                    <span class="text-muted">${match.ebay.seller_info.feedback_percentage}% (${match.ebay.seller_info.feedback_count})</span>
+                </div>
+            ` : 'Bilinmiyor'}
+        </td>
+        <td>${match.ebay.sold_count}</td>
+        <td>
+            <div class="btn-group btn-group-sm">
+                <a href="${match.ebay.url}" class="btn btn-outline-primary" target="_blank" title="eBay'de Görüntüle">
+                    <i class="fab fa-ebay"></i>
+                </a>
+                <a href="${match.amazon.url}" class="btn btn-outline-success" target="_blank" title="Amazon'da Görüntüle">
+                    <i class="fab fa-amazon"></i>
+                </a>
+            </div>
+        </td>
+    `;
+    
+    return tr;
+}
+
+function sortResults() {
+    const sortBy = document.getElementById('sortBy').value;
+    
+    filteredResults.sort((a, b) => {
+        switch (sortBy) {
+            case 'profit_desc':
+                return b.match_details.profit_margin_percent - a.match_details.profit_margin_percent;
+            case 'profit_asc':
+                return a.match_details.profit_margin_percent - b.match_details.profit_margin_percent;
+            case 'ebay_sales_desc':
+                return b.ebay.sold_count - a.ebay.sold_count;
+            case 'ebay_sales_asc':
+                return a.ebay.sold_count - b.ebay.sold_count;
+            case 'seller_feedback_desc':
+                return (b.ebay.seller_info?.feedback_percentage || 0) - (a.ebay.seller_info?.feedback_percentage || 0);
+            case 'seller_feedback_asc':
+                return (a.ebay.seller_info?.feedback_percentage || 0) - (b.ebay.seller_info?.feedback_percentage || 0);
+            case 'seller_count_desc':
+                return (b.ebay.seller_info?.feedback_count || 0) - (a.ebay.seller_info?.feedback_count || 0);
+            case 'seller_count_asc':
+                return (a.ebay.seller_info?.feedback_count || 0) - (b.ebay.seller_info?.feedback_count || 0);
+            default:
+                return 0;
+        }
+    });
+    
+    updateResultsDisplay();
+}
+
+function filterResults() {
+    const minProfit = parseFloat(document.getElementById('minProfitFilter').value) || 0;
+    const maxSellerSales = parseFloat(document.getElementById('maxSellerSales').value) || Infinity;
+    const topRatedOnly = document.getElementById('topRatedOnly').checked;
+    const smallSellersOnly = document.getElementById('smallSellersOnly').checked;
+    
+    filteredResults = allResults.filter(match => {
+        // Profit margin filter
+        if (match.match_details.profit_margin_percent < minProfit) return false;
+        
+        // Seller sales filter
+        if (match.ebay.seller_info && match.ebay.seller_info.feedback_count > maxSellerSales) return false;
+        
+        // Top rated filter
+        if (topRatedOnly && (!match.ebay.seller_info || !match.ebay.seller_info.is_top_rated)) return false;
+        
+        // Small sellers filter (less than 1000 sales)
+        if (smallSellersOnly && match.ebay.seller_info && match.ebay.seller_info.feedback_count >= 1000) return false;
+        
+        return true;
+    });
+    
+    updateResultsDisplay();
+}
+
+function changeViewMode() {
+    updateResultsDisplay();
+}
+
+function exportResults() {
+    // Create CSV content
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "eBay Ürün,eBay Fiyat,Amazon Fiyat,Kar Marjı (%),Kar ($),Satıcı,Satıcı Puanı,Satış Sayısı,eBay Link,Amazon Link\n";
+    
+    filteredResults.forEach(match => {
+        const row = [
+            `"${match.ebay.title}"`,
+            match.ebay.price,
+            match.amazon.price,
+            match.match_details.profit_margin_percent.toFixed(2),
+            match.match_details.potential_profit,
+            `"${match.ebay.seller_info?.username || 'Bilinmiyor'}"`,
+            match.ebay.seller_info?.feedback_percentage || 0,
+            match.ebay.sold_count,
+            match.ebay.url,
+            match.amazon.url
+        ].join(",");
+        csvContent += row + "\n";
+    });
+    
+    // Download CSV
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "dropshipping_analizi.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function showError(message) {
+    document.getElementById('loadingSection').style.display = 'none';
+    document.getElementById('errorSection').style.display = 'block';
+    document.getElementById('errorMessage').textContent = message;
+}
+</script>
+{% endblock %} 
