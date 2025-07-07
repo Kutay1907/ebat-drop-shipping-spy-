@@ -1,0 +1,21 @@
+{
+  "id": "35e87979-4054-41c8-8fde-b179e9e9c169",
+  "criteria": {
+    "keyword": "phone case",
+    "marketplace": "ebay.com",
+    "category_id": null,
+    "min_price": null,
+    "max_price": null,
+    "condition": "new",
+    "sold_listings_only": true,
+    "date_range_days": 30,
+    "max_results": 20
+  },
+  "products": [],
+  "market_analysis": null,
+  "status": "in_progress",
+  "error_message": null,
+  "scraping_duration": 11.798249,
+  "created_at": "2025-07-01T14:17:31.452915",
+  "completed_at": "2025-07-01T14:17:43.251164"
+}

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Search - eBay Scraper{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>eBay Product Search</h2>
+    <p>Enter your search criteria to start scraping eBay products with market analysis.</p>
+    
+    {% if error %}
+    <div class="alert alert-error">
+        <strong>Error:</strong> {{ error }}
+    </div>
+    {% endif %}
+    
+    <form method="POST" action="/search">
+        <div class="form-group">
+            <label for="keyword">Search Keyword *</label>
+            <input type="text" id="keyword" name="keyword" 
+                   value="{{ form_data.keyword if form_data else '' }}" 
+                   placeholder="e.g., wireless headphones, phone case, laptop bag" 
+                   required>
+        </div>
+        
+        <div class="grid">
+            <div class="form-group">
+                <label for="category_id">Category ID (Optional)</label>
+                <input type="text" id="category_id" name="category_id" 
+                       value="{{ form_data.category_id if form_data else '' }}"
+                       placeholder="e.g., 58058 for cell phones">
+            </div>
+            
+            <div class="form-group">
+                <label for="condition">Condition</label>
+                <select id="condition" name="condition">
+                    <option value="">Any Condition</option>
+                    <option value="new" {{ 'selected' if form_data and form_data.condition == 'new' else '' }}>New</option>
+                    <option value="used" {{ 'selected' if form_data and form_data.condition == 'used' else '' }}>Used</option>
+                    <option value="refurbished" {{ 'selected' if form_data and form_data.condition == 'refurbished' else '' }}>Refurbished</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="form-group">
+                <label for="min_price">Min Price ($)</label>
+                <input type="number" id="min_price" name="min_price" 
+                       value="{{ form_data.min_price if form_data else '' }}"
+                       min="0" step="0.01" placeholder="0.00">
+            </div>
+            
+            <div class="form-group">
+                <label for="max_price">Max Price ($)</label>
+                <input type="number" id="max_price" name="max_price" 
+                       value="{{ form_data.max_price if form_data else '' }}"
+                       min="0" step="0.01" placeholder="999.99">
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="form-group">
+                <label for="max_results">Max Results</label>
+                <select id="max_results" name="max_results">
+                    <option value="10" {{ 'selected' if form_data and form_data.max_results == '10' else '' }}>10 products</option>
+                    <option value="20" {{ 'selected' if form_data and form_data.max_results == '20' or not form_data else '' }}>20 products</option>
+                    <option value="50" {{ 'selected' if form_data and form_data.max_results == '50' else '' }}>50 products</option>
+                    <option value="100" {{ 'selected' if form_data and form_data.max_results == '100' else '' }}>100 products</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="date_range_days">Date Range (days)</label>
+                <select id="date_range_days" name="date_range_days">
+                    <option value="7" {{ 'selected' if form_data and form_data.date_range_days == '7' else '' }}>Last 7 days</option>
+                    <option value="30" {{ 'selected' if form_data and form_data.date_range_days == '30' or not form_data else '' }}>Last 30 days</option>
+                    <option value="90" {{ 'selected' if form_data and form_data.date_range_days == '90' else '' }}>Last 90 days</option>
+                    <option value="365" {{ 'selected' if form_data and form_data.date_range_days == '365' else '' }}>Last year</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="sold_listings_only" 
+                       {{ 'checked' if form_data and form_data.sold_listings_only else '' }}>
+                Search only sold listings
+            </label>
+        </div>
+        
+        <button type="submit" class="btn">Start Scraping</button>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Features</h3>
+    <div class="grid">
+        <div>
+            <h4>🔍 Smart Scraping</h4>
+            <p>Advanced product data extraction with sold counts and market insights.</p>
+        </div>
+        <div>
+            <h4>🛡️ Bot Protection</h4>
+            <p>Built-in anti-detection measures including delays and human-like behavior.</p>
+        </div>
+        <div>
+            <h4>📊 Market Analysis</h4>
+            <p>Comprehensive market data with price trends and seller analytics.</p>
+        </div>
+        <div>
+            <h4>⚡ Async Processing</h4>
+            <p>High-performance async architecture for fast results.</p>
+        </div>
+    </div>
+</div>
+{% endblock %} 

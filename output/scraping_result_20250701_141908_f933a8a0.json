@@ -1,0 +1,21 @@
+{
+  "id": "f933a8a0-a0e2-4aa8-8d11-8eb5b87af2fc",
+  "criteria": {
+    "keyword": "phone case",
+    "marketplace": "ebay.com",
+    "category_id": null,
+    "min_price": null,
+    "max_price": null,
+    "condition": "new",
+    "sold_listings_only": true,
+    "date_range_days": 30,
+    "max_results": 20
+  },
+  "products": [],
+  "market_analysis": null,
+  "status": "failed",
+  "error_message": "Failed to scrape products for 'phone case': 'SearchCriteria' object has no attribute 'free_shipping_only'",
+  "scraping_duration": 80.982318,
+  "created_at": "2025-07-01T14:17:47.120814",
+  "completed_at": "2025-07-01T14:19:08.103132"
+}

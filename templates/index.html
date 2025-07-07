@@ -1,398 +1,58 @@
 {% extends "base.html" %}
 
-{% block title %}eBay Dropshipping Spy - Ana Sayfa{% endblock %}
+{% block title %}Home - eBay Scraper{% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
-<div class="hero-section">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-lg-6">
-                <h1 class="display-4 fw-bold text-primary mb-4">
-                    eBay Dropshipping Spy
-                </h1>
-                <p class="lead mb-4">
-                    eBay'de satılan ürünleri Amazon'da daha ucuza bulun ve %50+ kar marjıyla dropshipping fırsatlarını keşfedin.
-                </p>
-                <div class="d-flex gap-3">
-                    <button class="btn btn-primary btn-lg px-4" onclick="scrollToAnalysis()">
-                        <i class="fas fa-search me-2"></i>Analiz Başlat
-                    </button>
-                    <a href="/demo" class="btn btn-outline-primary btn-lg px-4">
-                        <i class="fas fa-play me-2"></i>Demo Görüntüle
-                    </a>
-                </div>
-            </div>
-            <div class="col-lg-6 text-center">
-                <div class="hero-animation">
-                    <i class="fas fa-chart-line fa-8x text-primary opacity-75"></i>
-                </div>
-            </div>
+<div class="card">
+    <h2>Welcome to eBay Scraper & Market Analyzer</h2>
+    <p>A comprehensive eBay scraping solution built with clean architecture and SOLID principles.</p>
+    
+    <div class="grid" style="margin-top: 2rem;">
+        <div class="card">
+            <h3>🔍 Smart Scraping</h3>
+            <p>Advanced eBay product scraping with Terapeak integration and intelligent fallback mechanisms.</p>
         </div>
+        
+        <div class="card">
+            <h3>🛡️ Bot Protection</h3>
+            <p>Sophisticated anti-detection measures including human-like behavior simulation and rate limiting.</p>
+        </div>
+        
+        <div class="card">
+            <h3>📊 Market Analysis</h3>
+            <p>Comprehensive market insights with sold counts, price trends, and seller analytics.</p>
+        </div>
+        
+        <div class="card">
+            <h3>🌐 Modern Interface</h3>
+            <p>Clean web interface with real-time updates and RESTful API endpoints.</p>
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="/search" class="btn">Start Scraping</a>
+        <a href="/health" class="btn btn-secondary">System Status</a>
     </div>
 </div>
 
-<!-- Features Section -->
-<div class="container my-5">
-    <div class="row g-4">
-        <div class="col-md-4">
-            <div class="feature-card h-100">
-                <div class="card-body text-center">
-                    <i class="fas fa-list-alt fa-3x text-primary mb-3"></i>
-                    <h5 class="card-title">Kategori Seçimi</h5>
-                    <p class="card-text">eBay'de bulunan tüm kategorilerden seçim yapın ve hedeflediğiniz ürün tiplerini analiz edin.</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="feature-card h-100">
-                <div class="card-body text-center">
-                    <i class="fas fa-store fa-3x text-success mb-3"></i>
-                    <h5 class="card-title">Satıcı Analizi</h5>
-                    <p class="card-text">Küçük ve başarılı satıcıları keşfedin. Satış sayısı ve değerlendirmelere göre sıralayın.</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="feature-card h-100">
-                <div class="card-body text-center">
-                    <i class="fas fa-percentage fa-3x text-warning mb-3"></i>
-                    <h5 class="card-title">Kar Marjı Analizi</h5>
-                    <p class="card-text">%50+ kar marjıyla satılabilecek ürünleri otomatik olarak bulun ve karlılığınızı artırın.</p>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="card">
+    <h3>Features</h3>
+    <ul style="line-height: 2;">
+        <li>✅ SOLID Architecture with dependency injection</li>
+        <li>✅ Async-first design for high performance</li>
+        <li>✅ Comprehensive bot protection measures</li>
+        <li>✅ Configurable retry and backoff strategies</li>
+        <li>✅ Structured logging and monitoring</li>
+        <li>✅ RESTful API with JSON responses</li>
+        <li>🚧 Terapeak market analysis integration</li>
+        <li>🚧 Real-time scraping progress updates</li>
+        <li>🚧 Data persistence and caching</li>
+    </ul>
 </div>
 
-<!-- Analysis Form -->
-<div class="container" id="analysis-section">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="analysis-card">
-                <div class="card-header">
-                    <h3 class="mb-0">
-                        <i class="fas fa-search me-2"></i>Dropshipping Analizi
-                    </h3>
-                    <p class="mb-0 text-muted">Karlı ürünler için detaylı analiz başlatın</p>
-                </div>
-                <div class="card-body">
-                    <form id="analysisForm">
-                        <!-- Category Selection -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <label for="categorySelect" class="form-label fw-bold">
-                                    <i class="fas fa-layer-group me-2"></i>Kategori Seçimi
-                                </label>
-                                <select class="form-select form-select-lg" id="categorySelect" name="category" required>
-                                    <option value="">Kategori yükleniyor...</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Analysis Settings -->
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <label for="maxProducts" class="form-label">Maksimum Ürün Sayısı</label>
-                                <select class="form-select" id="maxProducts" name="max_products">
-                                    <option value="10">10 ürün</option>
-                                    <option value="20">20 ürün</option>
-                                    <option value="50">50 ürün</option>
-                                    <option value="100">100 ürün</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="minSoldCount" class="form-label">Minimum Satış Sayısı</label>
-                                <select class="form-select" id="minSoldCount" name="min_sold_count">
-                                    <option value="3">En az 3 satış</option>
-                                    <option value="5">En az 5 satış</option>
-                                    <option value="10">En az 10 satış</option>
-                                    <option value="20">En az 20 satış</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Price Filters -->
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <label for="minPrice" class="form-label">Minimum Fiyat ($)</label>
-                                <input type="number" class="form-control" id="minPrice" name="min_price"
-                                       placeholder="Örn: 10" min="0" step="0.01">
-                            </div>
-                            <div class="col-md-6">
-                                <label for="maxPrice" class="form-label">Maksimum Fiyat ($)</label>
-                                <input type="number" class="form-control" id="maxPrice" name="max_price"
-                                       placeholder="Örn: 500" min="0" step="0.01">
-                            </div>
-                        </div>
-
-                        <!-- Profit Settings -->
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <label for="minProfit" class="form-label">Minimum Kar Marjı (%)</label>
-                                <select class="form-select" id="minProfit" name="min_profit">
-                                    <option value="50">%50 kar marjı</option>
-                                    <option value="75">%75 kar marjı</option>
-                                    <option value="100">%100 kar marjı</option>
-                                    <option value="150">%150 kar marjı</option>
-                                    <option value="200">%200 kar marjı</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="sortBy" class="form-label">Sıralama</label>
-                                <select class="form-select" id="sortBy" name="sort_by">
-                                    <option value="sold">Satış sayısına göre</option>
-                                    <option value="price">Fiyata göre (düşük-yüksek)</option>
-                                    <option value="price_desc">Fiyata göre (yüksek-düşük)</option>
-                                    <option value="newest">Yeni ürünler</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Advanced Options -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <div class="card">
-                                    <div class="card-header bg-primary text-white">
-                                        <h5 class="mb-0">
-                                            <i class="fas fa-search me-2"></i>Gerçek Zamanlı Analiz
-                                        </h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <p class="text-muted">
-                                            eBay ve Amazon'dan gerçek zamanlı veri çekerek analiz yapar.
-                                            Hızlı ve güvenilir sonuçlar için optimize edilmiştir.
-                                        </p>
-                                        
-                                        <div class="form-check form-switch mb-3">
-                                            <input class="form-check-input" type="checkbox" 
-                                                   id="useImageMatching" name="use_image_matching">
-                                            <label class="form-check-label" for="useImageMatching">
-                                                <i class="fas fa-image me-2"></i>Görsel Benzerlik Analizi
-                                            </label>
-                                            <small class="form-text text-muted">
-                                                Ürün görsellerini karşılaştırarak daha doğru eşleştirme yapar (yavaşlatır)
-                                            </small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Submit Button -->
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg" id="analyzeBtn">
-                                <i class="fas fa-chart-line me-2"></i>Analizi Başlat
-                            </button>
-                            <button type="button" class="btn btn-warning" id="resetBtn" style="display: none;">
-                                <i class="fas fa-refresh me-2"></i>Analizi Sıfırla
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="alert alert-info">
+    <strong>Note:</strong> This is a demonstration of clean architecture principles. 
+    The project implements SOLID design patterns with proper separation of concerns, 
+    dependency injection, and comprehensive error handling.
 </div>
-
-<!-- Status Section -->
-<div class="container mt-4" id="statusSection" style="display: none;">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card">
-                <div class="card-body text-center">
-                    <div class="spinner-border text-primary me-3" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <h5 class="mb-2">Analiz Yapılıyor...</h5>
-                    <p class="mb-0" id="statusText">Başlatılıyor...</p>
-                    <div class="progress mt-3">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                             role="progressbar" style="width: 0%"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-// Load categories on page load
-document.addEventListener('DOMContentLoaded', function() {
-    loadCategories();
-    setupDataSourceToggles();
-});
-
-// Load eBay categories
-function loadCategories() {
-    fetch('/api/categories')
-        .then(response => response.json())
-        .then(categories => {
-            const select = document.getElementById('categorySelect');
-            select.innerHTML = '<option value="">Bir kategori seçin...</option>';
-            
-            categories.forEach(category => {
-                const option = document.createElement('option');
-                option.value = category.id;
-                option.textContent = category.name;
-                select.appendChild(option);
-            });
-        })
-        .catch(error => {
-            console.error('Error loading categories:', error);
-            const select = document.getElementById('categorySelect');
-            select.innerHTML = '<option value="">Kategoriler yüklenemedi</option>';
-        });
-}
-
-// Setup data source toggles
-function setupDataSourceToggles() {
-    const ebayToggle = document.getElementById('useMockEbay');
-    const amazonToggle = document.getElementById('useMockAmazon');
-    const realEbayInfo = document.getElementById('realEbayInfo');
-    const realAmazonInfo = document.getElementById('realAmazonInfo');
-    
-    // eBay toggle
-    ebayToggle.addEventListener('change', function() {
-        if (this.checked) {
-            realEbayInfo.style.display = 'none';
-        } else {
-            realEbayInfo.style.display = 'block';
-        }
-    });
-    
-    // Amazon toggle
-    amazonToggle.addEventListener('change', function() {
-        if (this.checked) {
-            realAmazonInfo.style.display = 'none';
-        } else {
-            realAmazonInfo.style.display = 'block';
-        }
-    });
-    
-    // Reset button functionality
-    document.getElementById('resetBtn').addEventListener('click', function() {
-        if (confirm('Çalışan analizi durdurmak istediğinizden emin misiniz?')) {
-            resetAnalysis();
-        }
-    });
-}
-
-// Scroll to analysis section
-function scrollToAnalysis() {
-    document.getElementById('analysis-section').scrollIntoView({
-        behavior: 'smooth'
-    });
-}
-
-// Form submission
-document.getElementById('analysisForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(e.target);
-    const data = {
-        category_id: formData.get('category'),
-        max_products: parseInt(formData.get('max_products')) || 10,
-        min_sold_count: parseInt(formData.get('min_sold_count')) || 3,
-        min_price: formData.get('min_price') ? parseFloat(formData.get('min_price')) : null,
-        max_price: formData.get('max_price') ? parseFloat(formData.get('max_price')) : null,
-        min_profit: parseFloat(formData.get('min_profit')) || 50.0,
-        use_image_matching: formData.get('use_image_matching') === 'on'
-    };
-    
-    // Debug: Log form data
-    console.log('Form data:', data);
-    console.log('Category ID:', data.category_id);
-    
-    if (!data.category_id || data.category_id === '') {
-        alert('Lütfen bir kategori seçin.');
-        document.getElementById('categorySelect').focus();
-        return;
-    }
-    
-    startAnalysis(data);
-});
-
-function startAnalysis(data) {
-    // Show status section
-    document.getElementById('statusSection').style.display = 'block';
-    document.getElementById('analyzeBtn').disabled = true;
-    document.getElementById('analyzeBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Analiz yapılıyor...';
-    document.getElementById('resetBtn').style.display = 'inline-block';
-    
-    // Start analysis
-    fetch('/analyze', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.error) {
-            showError(result.error);
-        } else {
-            // Start polling for status
-            pollStatus(data.category_id);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Analiz başlatılırken hata oluştu: ' + error.message);
-        resetForm();
-    });
-}
-
-function resetAnalysis() {
-    fetch('/reset', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.json())
-    .then(result => {
-        alert('Analiz durumu sıfırlandı. Yeni analiz başlatabilirsiniz.');
-        resetForm();
-        document.getElementById('resetBtn').style.display = 'none';
-        document.getElementById('statusSection').style.display = 'none';
-    })
-    .catch(error => {
-        console.error('Reset error:', error);
-        alert('Sıfırlama hatası: ' + error.message);
-    });
-}
-
-function pollStatus(categoryId) {
-    const statusInterval = setInterval(() => {
-        fetch('/status')
-            .then(response => response.json())
-            .then(status => {
-                document.getElementById('statusText').textContent = status.progress;
-                
-                if (!status.running) {
-                    clearInterval(statusInterval);
-                    
-                    if (status.error) {
-                        alert('Analiz hatası: ' + status.error);
-                        resetForm();
-                    } else {
-                        // Redirect to results
-                        window.location.href = `/results?category=${categoryId}`;
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Status check error:', error);
-            });
-    }, 2000);
-}
-
-function resetForm() {
-    document.getElementById('analyzeBtn').disabled = false;
-    document.getElementById('analyzeBtn').innerHTML = '<i class="fas fa-chart-line me-2"></i>Analizi Başlat';
-    document.getElementById('statusSection').style.display = 'none';
-}
-</script>
 {% endblock %} 
