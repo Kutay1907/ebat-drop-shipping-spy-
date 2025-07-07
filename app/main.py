@@ -70,15 +70,21 @@ HTML_HOME = """
         body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;margin:0;padding:40px;}
         .card{max-width:700px;margin:0 auto;background:#fff;padding:30px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);}
         h1{text-align:center;color:#333;}
-        .btn{display:inline-block;margin:10px 0;padding:10px 20px;background:#0064d2;color:#fff;text-decoration:none;border-radius:5px;text-decoration:none;}
+        .btn{display:inline-block;margin:10px 0;padding:10px 20px;background:#0064d2;color:#fff;text-decoration:none;border-radius:5px;text-decoration:none;border:none;cursor:pointer;}
         .btn:hover{background:#0056b3;}
         .btn.secondary{background:#6c757d;}
         .btn.test{background:#28a745;}
-        input[type=text]{width:70%;padding:10px;border:1px solid #ccc;border-radius:5px;}
+        .btn.token{background:#17a2b8;}
+        input[type=text], textarea{width:70%;padding:10px;border:1px solid #ccc;border-radius:5px;font-family:monospace;}
+        textarea{height:80px;resize:vertical;}
         .status{margin:10px 0;padding:10px;border-radius:5px;}
         .success{background:#d4edda;color:#155724;border:1px solid #c3e6cb;}
         .error{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;}
         .info{background:#d1ecf1;color:#0c5460;border:1px solid #bee5eb;}
+        .warning{background:#fff3cd;color:#856404;border:1px solid #ffeaa7;}
+        .collapsible{margin:10px 0;}
+        .toggle{cursor:pointer;padding:10px;background:#f8f9fa;border:1px solid #dee2e6;border-radius:5px;}
+        .content{display:none;padding:15px;border:1px solid #dee2e6;border-top:none;}
     </style>
 </head>
 <body>
@@ -87,20 +93,35 @@ HTML_HOME = """
         <p><strong>eBay Dropshipping Research Tool</strong></p>
         
         <div class="info">
-            <strong>✅ No eBay Login Required!</strong><br>
-            Product search works immediately with just your API credentials.
+            <strong>🎯 Multiple Ways to Connect:</strong><br>
+            1. <strong>Automatic</strong>: Set EBAY_CLIENT_ID + EBAY_CLIENT_SECRET (recommended)<br>
+            2. <strong>Manual Token</strong>: Paste your existing eBay OAuth token below<br>
+            3. <strong>Environment</strong>: Set EBAY_OAUTH_TOKEN in environment variables
         </div>
         
         <div>
-            <a class="btn test" href="#" onclick="testToken()">🧪 Test eBay Connection</a>
-            <a class="btn secondary" href="/auth/login">🔑 Advanced: Connect eBay Account</a>
+            <a class="btn test" href="#" onclick="testAllTokens()">🧪 Test All Connections</a>
+            <a class="btn secondary" href="/auth/login">🔑 Get New eBay Token</a>
             <a class="btn secondary" href="/about">ℹ️ About</a>
-            <a class="btn secondary" href="/privacy">🛡️ Privacy</a>
             <a class="btn secondary" href="/health">💓 Health</a>
             <a class="btn secondary" href="/docs">📄 API Docs</a>
         </div>
         
         <div id="tokenStatus"></div>
+        
+        <!-- Manual Token Input Section -->
+        <div class="collapsible">
+            <div class="toggle" onclick="toggleSection('tokenSection')">
+                📝 <strong>Option 2: Use Your Existing eBay Token</strong> (Click to expand)
+            </div>
+            <div id="tokenSection" class="content">
+                <p>If you already have an eBay OAuth token, paste it here:</p>
+                <textarea id="manualToken" placeholder="Paste your eBay OAuth token here (starts with v^1.1#...)"></textarea><br>
+                <button class="btn token" onclick="testManualToken()">Test This Token</button>
+                <button class="btn" onclick="searchWithManualToken()">Search with This Token</button>
+                <div id="manualTokenStatus"></div>
+            </div>
+        </div>
         
         <hr>
         <h3>🔍 Product Search</h3>
@@ -114,21 +135,95 @@ HTML_HOME = """
     </div>
 
 <script>
-async function testToken() {
+function toggleSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    section.style.display = section.style.display === 'block' ? 'none' : 'block';
+}
+
+async function testAllTokens() {
     const statusDiv = document.getElementById('tokenStatus');
-    statusDiv.innerHTML = '<div class="info">Testing eBay API connection...</div>';
+    statusDiv.innerHTML = '<div class="info">Testing all eBay connections...</div>';
     
     try {
         const res = await fetch('/api/search/test-token');
         const data = await res.json();
         
-        if (data.status === 'success') {
-            statusDiv.innerHTML = `<div class="success">✅ ${data.message}<br>Token: ${data.token_preview} (${data.token_length} chars)</div>`;
-        } else {
-            statusDiv.innerHTML = `<div class="error">❌ ${data.message}<br>Check: ${data.check?.join(', ')}</div>`;
-        }
+        let html = '<div class="success"><strong>✅ Connection Test Results:</strong><br>';
+        data.tests.forEach(test => {
+            const icon = test.status === 'success' ? '✅' : test.status === 'failed' ? '❌' : '⚠️';
+            html += `${icon} ${test.type}: ${test.message}<br>`;
+            if (test.token_preview) {
+                html += `&nbsp;&nbsp;&nbsp;Token: ${test.token_preview}<br>`;
+            }
+        });
+        html += `<br><strong>${data.recommendation}</strong></div>`;
+        statusDiv.innerHTML = html;
     } catch (err) {
         statusDiv.innerHTML = `<div class="error">❌ Connection test failed: ${err.message}</div>`;
+    }
+}
+
+async function testManualToken() {
+    const token = document.getElementById('manualToken').value.trim();
+    const statusDiv = document.getElementById('manualTokenStatus');
+    
+    if (!token) {
+        statusDiv.innerHTML = '<div class="warning">⚠️ Please enter a token first</div>';
+        return;
+    }
+    
+    statusDiv.innerHTML = '<div class="info">Testing your token...</div>';
+    
+    try {
+        const res = await fetch('/api/search/with-token', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({token: token, keyword: 'test'})
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            statusDiv.innerHTML = `<div class="success">✅ Token works! Preview: ${data.token_preview}</div>`;
+        } else {
+            const error = await res.json();
+            statusDiv.innerHTML = `<div class="error">❌ Token test failed: ${error.detail}</div>`;
+        }
+    } catch (err) {
+        statusDiv.innerHTML = `<div class="error">❌ Error testing token: ${err.message}</div>`;
+    }
+}
+
+async function searchWithManualToken() {
+    const token = document.getElementById('manualToken').value.trim();
+    const keyword = document.getElementById('keyword').value.trim() || 'laptop';
+    
+    if (!token) {
+        document.getElementById('manualTokenStatus').innerHTML = '<div class="warning">⚠️ Please enter a token first</div>';
+        return;
+    }
+    
+    document.getElementById('searchStatus').innerHTML = '<div class="info">Searching with your token...</div>';
+    
+    try {
+        const res = await fetch('/api/search', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({keyword: keyword, token: token})
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+            document.getElementById('searchStatus').innerHTML = 
+                `<div class="success">✅ Found ${data.total_found} products for "${data.keyword}" using ${data.token_type} token</div>`;
+            document.getElementById('results').textContent = JSON.stringify(data, null, 2);
+        } else {
+            document.getElementById('searchStatus').innerHTML = 
+                `<div class="error">❌ Search failed: ${data.detail}</div>`;
+        }
+    } catch (err) {
+        document.getElementById('searchStatus').innerHTML = 
+            `<div class="error">❌ Search error: ${err.message}</div>`;
     }
 }
 
@@ -153,7 +248,7 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
         const data = await res.json();
         
         if (res.ok) {
-            statusDiv.innerHTML = `<div class="success">✅ Found ${data.total_found} products for "${data.keyword}"</div>`;
+            statusDiv.innerHTML = `<div class="success">✅ Found ${data.total_found} products for "${data.keyword}" using ${data.token_type} token</div>`;
             resultsDiv.textContent = JSON.stringify(data, null, 2);
         } else {
             statusDiv.innerHTML = `<div class="error">❌ Search failed: ${data.detail}</div>`;
@@ -162,6 +257,14 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
         statusDiv.innerHTML = `<div class="error">❌ Search error: ${err.message}</div>`;
     }
 });
+
+// Pre-fill token if provided via URL parameter
+const urlParams = new URLSearchParams(window.location.search);
+const tokenParam = urlParams.get('token');
+if (tokenParam) {
+    document.getElementById('manualToken').value = tokenParam;
+    toggleSection('tokenSection');
+}
 </script>
 </body>
 </html>
