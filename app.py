@@ -256,6 +256,63 @@ def webhook():
     # Handle POST webhook data
     return jsonify({'status': 'received'})
 
+@app.route('/privacy')
+def privacy():
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Privacy Policy - eBay Dropshipping Tool</title>
+        <style>body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; background: #f5f5f5; } .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); } h1 { color: #333; } </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Privacy Policy</h1>
+            <p>Your privacy is important to us. This app does not store, share, or sell any personal information. All data is used solely for the purpose of eBay dropshipping product search and is not retained after your session ends.</p>
+            <p>If you have any questions, please contact us via the support form.</p>
+        </div>
+    </body>
+    </html>
+    """)
+
+@app.route('/auth/success')
+def auth_success():
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Authentication Success - eBay Dropshipping Tool</title>
+        <style>body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; background: #f5f5f5; } .container { background: #e6ffe6; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); } h1 { color: #28a745; } </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>✅ Authentication Successful</h1>
+            <p>You have successfully authenticated with eBay. You may now use the dropshipping tool.</p>
+            <a href="/">Go to Home</a>
+        </div>
+    </body>
+    </html>
+    """)
+
+@app.route('/auth/failure')
+def auth_failure():
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Authentication Failed - eBay Dropshipping Tool</title>
+        <style>body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; background: #f5f5f5; } .container { background: #ffe6e6; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); } h1 { color: #dc3545; } </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>❌ Authentication Failed</h1>
+            <p>There was a problem authenticating with eBay. Please try again or contact support if the issue persists.</p>
+            <a href="/">Return to Home</a>
+        </div>
+    </body>
+    </html>
+    """)
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port) 
