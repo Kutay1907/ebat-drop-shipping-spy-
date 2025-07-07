@@ -16,6 +16,30 @@ import asyncio
 import subprocess
 from pathlib import Path
 
+def install_dependencies():
+    """Install dependencies if they're missing."""
+    print("📦 Installing dependencies...")
+    
+    try:
+        # Try to install requirements.txt
+        result = subprocess.run([
+            sys.executable, "-m", "pip", "install", "-r", "requirements.txt"
+        ], capture_output=True, text=True, timeout=300)
+        
+        if result.returncode == 0:
+            print("✅ Dependencies installed successfully")
+            return True
+        else:
+            print(f"⚠️  Dependency installation warning: {result.stderr}")
+            return False
+            
+    except subprocess.TimeoutExpired:
+        print("⚠️  Dependency installation timed out")
+        return False
+    except Exception as e:
+        print(f"⚠️  Dependency installation failed: {e}")
+        return False
+
 def setup_production_environment():
     """Set up production environment and directories."""
     print("🔧 Setting up production environment...")
@@ -71,6 +95,8 @@ def check_dependencies():
         "playwright": "Browser automation (optional)"
     }
     
+    missing_deps = []
+    
     for dep, description in dependencies.items():
         try:
             __import__(dep)
@@ -80,7 +106,17 @@ def check_dependencies():
                 print(f"⚠️  {description}: {dep} not available (optional)")
             else:
                 print(f"❌ {description}: {dep} missing")
-                return False
+                missing_deps.append(dep)
+    
+    if missing_deps:
+        print(f"⚠️  Missing critical dependencies: {missing_deps}")
+        print("🔄 Attempting to install missing dependencies...")
+        if install_dependencies():
+            # Re-check after installation
+            print("🔄 Re-checking dependencies after installation...")
+            return check_dependencies()
+        else:
+            return False
     
     return True
 

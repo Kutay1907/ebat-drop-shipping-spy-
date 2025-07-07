@@ -10,12 +10,17 @@ cmds = [
 ]
 
 [phases.install]
-cmds = ["pip install -r requirements.txt"]
+cmds = [
+    "pip install -r requirements.txt",
+    "pip install --upgrade pip setuptools wheel"
+]
 
 [phases.build]
 cmds = [
     "python -c 'import sys; print(f\"Python version: {sys.version}\")'",
     "python -c 'import quart; print(f\"Quart installed: {quart.__name__}\")'",
+    "python -c 'import aiosqlite; print(f\"aiosqlite installed: {aiosqlite.__name__}\")'",
+    "python -c 'import pydantic; print(f\"Pydantic installed: {pydantic.__name__}\")'",
     "python -c 'print(\"✅ Build verification complete\")'"
 ]
 

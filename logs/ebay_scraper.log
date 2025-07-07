@@ -700,3 +700,12 @@
 {"timestamp": "2025-07-07T14:24:25.237677", "level": "INFO", "module": "logging_service", "function": "_log", "message": "\u2705 Production scraping services validated successfully"}
 {"timestamp": "2025-07-07T14:24:25.237710", "level": "INFO", "module": "logging_service", "function": "_log", "message": "\ud83d\ude80 Production mode: All services are real, no mock data allowed", "use_mock_data": false, "environment": "development"}
 {"timestamp": "2025-07-07T14:24:25.237739", "level": "INFO", "module": "logging_service", "function": "_log", "message": "Dependency container initialized successfully", "services_count": 17, "production_mode": true}
+{"timestamp": "2025-07-07T16:14:36.288652", "level": "INFO", "module": "logging_service", "function": "_log", "message": "\u2705 Playwright dependency verified for production mode"}
+{"timestamp": "2025-07-07T16:14:36.289775", "level": "INFO", "module": "logging_service", "function": "_log", "message": "Initialized default user agents", "count": 8}
+{"timestamp": "2025-07-07T16:14:36.293307", "level": "INFO", "module": "logging_service", "function": "_log", "message": "Database storage service initialized", "db_path": "data/ebay_scraper.db"}
+{"timestamp": "2025-07-07T16:14:36.293409", "level": "INFO", "module": "logging_service", "function": "_log", "message": "\ud83d\udd25 Production mode: Initializing real scraping services", "use_mock_data": false}
+{"timestamp": "2025-07-07T16:14:36.293453", "level": "INFO", "module": "logging_service", "function": "_log", "message": "\u2705 Real scraping services initialized successfully"}
+{"timestamp": "2025-07-07T16:14:36.293485", "level": "INFO", "module": "logging_service", "function": "_log", "message": "\ud83d\udd0d Validating production scraping services..."}
+{"timestamp": "2025-07-07T16:14:36.293524", "level": "INFO", "module": "logging_service", "function": "_log", "message": "\u2705 Production scraping services validated successfully"}
+{"timestamp": "2025-07-07T16:14:36.293589", "level": "INFO", "module": "logging_service", "function": "_log", "message": "\ud83d\ude80 Production mode: All services are real, no mock data allowed", "use_mock_data": false, "environment": "development"}
+{"timestamp": "2025-07-07T16:14:36.293651", "level": "INFO", "module": "logging_service", "function": "_log", "message": "Dependency container initialized successfully", "services_count": 17, "production_mode": true}

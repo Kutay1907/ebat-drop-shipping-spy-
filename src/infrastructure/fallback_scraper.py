@@ -99,16 +99,16 @@ class FallbackScraper(IProductScraper):
             page.on("close", lambda: asyncio.create_task(self.logger.log_warning(f"⚠️ Page closed during scraping for '{search_keyword}'")))
             
             # Apply bot protection before navigating
-            await self.bot_protection.apply_protection(page)
+                await self.bot_protection.apply_protection(page)
+                
+                # Build search URL
+                search_url = self._build_search_url(criteria)
             
-            # Build search URL
-            search_url = self._build_search_url(criteria)
-            
-            await self.logger.log_info(
-                "Navigating to eBay search",
-                url=search_url
-            )
-            
+                await self.logger.log_info(
+                    "Navigating to eBay search",
+                    url=search_url
+                )
+                
             # ✅ Enhanced navigation with better error handling
             try:
                 await page.goto(search_url, wait_until='networkidle', timeout=self.timeout * 1000)
@@ -126,23 +126,23 @@ class FallbackScraper(IProductScraper):
             
             # Check for rate limiting or blocking
             await self._check_rate_limit_status(page, search_url)
-            
-            # Wait for search results to load
-            await self._wait_for_search_results(page)
-            
+                
+                # Wait for search results to load
+                await self._wait_for_search_results(page)
+                
             # ✅ Double-check browser state before extraction
             if page.is_closed():
                 raise ScrapingError("Browser page closed unexpectedly before extraction", keyword=criteria.keyword)
             
             # Extract products from search results
             products = await self._extract_products_from_search(page, criteria.max_results)
-            
-            await self.logger.log_info(
-                "Fallback scraping completed successfully",
-                keyword=criteria.keyword,
-                products_found=len(products)
-            )
-            
+                
+                await self.logger.log_info(
+                    "Fallback scraping completed successfully",
+                    keyword=criteria.keyword,
+                    products_found=len(products)
+                )
+                
         except BotDetectionError:
             # Re-raise bot detection errors
             raise
@@ -686,7 +686,7 @@ class FallbackScraper(IProductScraper):
                 "Failed to extract products from search page",
                 error=str(e)
             )
-            return products
+        return products
     
     async def _extract_product_from_element(self, item_element) -> Optional[Product]:
         """Extract data for a single product item."""
