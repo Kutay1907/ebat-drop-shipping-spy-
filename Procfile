@@ -1,1 +1,1 @@
-web: playwright install chromium && python main.py 
+web: python start_production.py 

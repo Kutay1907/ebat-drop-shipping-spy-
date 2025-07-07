@@ -1,0 +1,23 @@
+[variables]
+PYTHONPATH = "."
+ENVIRONMENT = "production"
+USE_MOCK_DATA = "false"
+
+[phases.setup]
+cmds = [
+    "mkdir -p data logs output",
+    "python -m pip install --upgrade pip"
+]
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+[phases.build]
+cmds = [
+    "python -c 'import sys; print(f\"Python version: {sys.version}\")'",
+    "python -c 'import quart; print(f\"Quart installed: {quart.__name__}\")'",
+    "python -c 'print(\"✅ Build verification complete\")'"
+]
+
+[start]
+cmd = "python start_production.py" 
