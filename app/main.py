@@ -34,7 +34,13 @@ HTML_HOME = """
     <div class="card">
         <h1>🛍️ Revolist</h1>
         <p>Connect your eBay account and start searching profitable items.</p>
-        <a class="btn" href="/auth/login">🔑 Connect with eBay</a>
+        <div>
+            <a class="btn" href="/auth/login">🔑 Connect with eBay</a>
+            <a class="btn" href="/about">ℹ️ About</a>
+            <a class="btn" href="/privacy">🛡️ Privacy</a>
+            <a class="btn" href="/health">💓 Health</a>
+            <a class="btn" href="/docs">📄 API Docs</a>
+        </div>
         <hr>
         <h3>Quick Search</h3>
         <form id="searchForm">
