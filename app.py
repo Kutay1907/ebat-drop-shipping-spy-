@@ -219,21 +219,25 @@ def api_health():
 
 @app.route('/api/search', methods=['POST'])
 def api_search():
-    """API endpoint for searching products"""
-    data = request.get_json()
-    keyword = data.get('keyword', '')
-    
-    return jsonify({
-        'keyword': keyword,
-        'results': [
-            {
-                'id': '123',
-                'title': f'{keyword} Product',
-                'price': 29.99,
-                'url': 'https://ebay.com/item/123'
-            }
-        ]
-    })
+    """API endpoint for searching products via real eBay API"""
+    data = request.get_json(force=True)
+    keyword = data.get("keyword", "").strip()
+    if not keyword:
+        return jsonify({"error": "keyword is required"}), 400
+
+    # Obtain OAuth token (prefer env variable, fallback to request body)
+    token = os.getenv("EBAY_OAUTH_TOKEN") or data.get("token")
+    if not token:
+        return jsonify({"error": "eBay OAuth token missing"}), 400
+
+    try:
+        from ebay_client import ebay_keyword_search
+        import asyncio
+
+        results = asyncio.run(ebay_keyword_search(keyword, token))
+        return jsonify(results)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
 @app.route('/api/products')
 def api_products():
