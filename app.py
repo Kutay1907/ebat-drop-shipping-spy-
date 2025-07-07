@@ -313,6 +313,35 @@ def auth_failure():
     </html>
     """)
 
+@app.route('/about')
+def about():
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>About - eBay Dropshipping Tool</title>
+        <style>body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; background: #f5f5f5; } .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); } h1 { color: #333; } .info { margin-top: 20px; }</style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>About This App</h1>
+            <div class="info">
+                <p><strong>eBay Dropshipping Tool</strong> is a simple web application designed to help users find profitable products on eBay for dropshipping.</p>
+                <ul>
+                    <li>🔍 Search for products by keyword</li>
+                    <li>📦 View product details and pricing</li>
+                    <li>🔗 Integrate with eBay Developer APIs</li>
+                    <li>⚡ Fast, easy, and privacy-friendly</li>
+                </ul>
+                <p>This app is open source and designed for demonstration and integration with the eBay Developer Program.</p>
+                <p>For questions or support, please use the contact form or open an issue on GitHub.</p>
+            </div>
+            <a href="/">← Back to Home</a>
+        </div>
+    </body>
+    </html>
+    """)
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port) 
