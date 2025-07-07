@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 import os, asyncio
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
-from app.ebay_client import ebay_keyword_search
+from ebay_client import ebay_keyword_search
 from app.database import get_session
 from app.token_service import get_valid_access_token
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,10 +12,10 @@ router = APIRouter(prefix="/api", tags=["search"])
 
 class SearchRequest(BaseModel):
     keyword: str
-    token: str | None = None  # optional if provided via env
+    token: Optional[str] = None  # optional if provided via env
 
 @router.post("/search")
-async def search_products(payload: SearchRequest, user_id: str | None = None, session: AsyncSession = Depends(get_session)) -> Dict[str, Any]:
+async def search_products(payload: SearchRequest, user_id: Optional[str] = None, session: AsyncSession = Depends(get_session)) -> Dict[str, Any]:
     keyword = payload.keyword.strip()
     if not keyword:
         raise HTTPException(status_code=400, detail="keyword is required")

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request, HTTPException, Depends
 import requests
 import os
+from typing import Optional
 from app.database import get_session
 from app.token_service import save_token
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +26,7 @@ def _post_token(data: dict) -> dict:
 
 
 @router.get("/callback")
-async def oauth_callback(request: Request, code: str, state: str | None = None, session: AsyncSession = Depends(get_session)):
+async def oauth_callback(request: Request, code: str, state: Optional[str] = None, session: AsyncSession = Depends(get_session)):
     """eBay OAuth callback – exchange `code` for access & refresh tokens."""
     data = {
         "grant_type": "authorization_code",

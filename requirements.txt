@@ -4,5 +4,6 @@ fastapi==0.111.0
 uvicorn==0.30.0
 pydantic==2.7.1
 sqlmodel==0.0.16
+sqlalchemy==2.0.30
 aiosqlite==0.19.0
 requests==2.32.3 
