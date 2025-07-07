@@ -10,4 +10,9 @@ app.include_router(search_router)
 # Health
 @app.get("/health")
 async def health():
-    return {"status": "ok"} 
+    return {"status": "ok"}
+
+@app.on_event("startup")
+async def on_startup():
+    from .database import init_db
+    await init_db() 
