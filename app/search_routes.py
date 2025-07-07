@@ -3,9 +3,9 @@ from pydantic import BaseModel
 import os, asyncio
 from typing import Dict, Any
 
-from ..ebay_client import ebay_keyword_search
-from .database import get_session
-from .token_service import get_valid_access_token
+from app.ebay_client import ebay_keyword_search
+from app.database import get_session
+from app.token_service import get_valid_access_token
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api", tags=["search"])

@@ -5,8 +5,8 @@ import requests
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from .models import UserToken
-from .database import async_session
+from app.models import UserToken
+from app.database import async_session
 
 EBAY_TOKEN_URL = "https://api.ebay.com/identity/v1/oauth2/token"
 

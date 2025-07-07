@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Request, HTTPException, Depends
 import requests
 import os
-from .database import get_session
-from .token_service import save_token
+from app.database import get_session
+from app.token_service import save_token
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/auth", tags=["auth"])
