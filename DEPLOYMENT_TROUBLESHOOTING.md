@@ -1,20 +1,54 @@
 # Deployment Troubleshooting Guide
 
-## Current Issue: Missing Dependencies
+## Current Issue: Pip Upgrade Failure
 
-The deployment is failing because `aiosqlite` and other critical dependencies are not being installed properly.
+The deployment is failing at the very first step: `python -m pip install --upgrade pip`. This indicates a fundamental issue with the Python environment in Railway.
 
 ## Quick Fixes to Try
 
-### 1. Force Dependency Installation
+### 1. Use Simplified Nixpacks Configuration
 
-If the deployment fails again, try these steps:
+The updated `nixpacks.toml` removes the problematic pip upgrade step:
 
-1. **Check Railway Logs**: Look for specific error messages in the Railway deployment logs
-2. **Verify Build Process**: Ensure the build phase is completing successfully
-3. **Check Python Version**: Make sure Railway is using a compatible Python version
+```toml
+[variables]
+PYTHONPATH = "."
+ENVIRONMENT = "production"
+USE_MOCK_DATA = "false"
 
-### 2. Alternative Deployment Commands
+[phases.setup]
+cmds = [
+    "mkdir -p data logs output"
+]
+
+[phases.install]
+cmds = [
+    "pip install -r requirements.txt"
+]
+
+[phases.build]
+cmds = [
+    "python -c 'import sys; print(f\"Python version: {sys.version}\")'",
+    "python -c 'print(\"✅ Build verification complete\")'"
+]
+
+[start]
+cmd = "python start_production.py"
+```
+
+### 2. Switch to Docker Deployment
+
+If Nixpacks continues to fail, switch to Docker deployment:
+
+1. **Rename the configuration**:
+   ```bash
+   mv railway.json railway-nixpacks.json
+   mv railway-docker.json railway.json
+   ```
+
+2. **Deploy with Docker**: Railway will now use the `Dockerfile` instead of Nixpacks
+
+### 3. Alternative Deployment Commands
 
 Try these alternative start commands in Railway:
 
@@ -33,27 +67,19 @@ python simple_deploy.py
 pip install -r requirements.txt && python start_production.py
 ```
 
-### 3. Update Railway Configuration
-
-If the issue persists, try updating your `railway.json`:
-
-```json
-{
-  "$schema": "https://railway.app/railway.schema.json",
-  "build": {
-    "builder": "NIXPACKS"
-  },
-  "deploy": {
-    "startCommand": "pip install -r requirements.txt && python start_production.py",
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
-  }
-}
-```
-
 ## Common Issues and Solutions
 
-### Issue 1: aiosqlite Installation Fails
+### Issue 1: Pip Upgrade Fails
+
+**Symptoms**: `python -m pip install --upgrade pip` fails
+
+**Solutions**:
+1. ✅ **FIXED**: Removed pip upgrade from nixpacks.toml
+2. Use Docker deployment instead
+3. Try a different Python version
+4. Use a simpler requirements.txt
+
+### Issue 2: aiosqlite Installation Fails
 
 **Symptoms**: `aiosqlite missing` error
 
@@ -62,7 +88,7 @@ If the issue persists, try updating your `railway.json`:
 2. Try installing system dependencies first
 3. Use an alternative database like SQLite3
 
-### Issue 2: Build Timeout
+### Issue 3: Build Timeout
 
 **Symptoms**: Build process times out
 
@@ -71,7 +97,7 @@ If the issue persists, try updating your `railway.json`:
 2. Use a simpler requirements.txt
 3. Split the build into smaller phases
 
-### Issue 3: Python Version Compatibility
+### Issue 4: Python Version Compatibility
 
 **Symptoms**: Import errors for basic packages
 
@@ -115,13 +141,23 @@ pydantic==2.5.2
 
 ## Alternative Deployment Strategies
 
-### Strategy 1: Docker Deployment
+### Strategy 1: Docker Deployment (RECOMMENDED)
 
-If Railway continues to have issues, consider using Docker:
+If Railway continues to have issues, use Docker:
 
-1. Create a `Dockerfile`
-2. Use Railway's Docker builder
-3. Have more control over the environment
+1. ✅ **Dockerfile created** with Python 3.11
+2. ✅ **railway-docker.json** configuration ready
+3. More control over the environment
+4. Better dependency management
+
+**To switch to Docker**:
+```bash
+# Backup current config
+mv railway.json railway-nixpacks.json
+# Use Docker config
+mv railway-docker.json railway.json
+# Deploy
+```
 
 ### Strategy 2: Other Platforms
 
@@ -139,18 +175,20 @@ For full control:
 
 ## Immediate Action Plan
 
-1. **Try the updated configuration** with the fallback deployment
-2. **Check Railway logs** for specific error messages
-3. **Run the verification script** to diagnose issues
-4. **Consider minimal deployment** if full deployment fails
-5. **Explore alternative platforms** if issues persist
+1. **Try the simplified nixpacks.toml** (removes pip upgrade)
+2. **If that fails, switch to Docker deployment**
+3. **Check Railway logs** for specific error messages
+4. **Run the verification script** to diagnose issues
+5. **Consider minimal deployment** if full deployment fails
+6. **Explore alternative platforms** if issues persist
 
-## Contact Information
+## Docker Deployment Benefits
 
-If you continue to have issues:
-1. Check Railway's documentation
-2. Review the error logs carefully
-3. Consider the alternative deployment strategies above
+- ✅ **More reliable**: Better control over the environment
+- ✅ **Faster builds**: Optimized with .dockerignore
+- ✅ **Better caching**: Dependencies cached separately
+- ✅ **Health checks**: Built-in health monitoring
+- ✅ **System dependencies**: Can install required system packages
 
 ## Success Metrics
 
