@@ -5,6 +5,7 @@ import os
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 EBAY_TOKEN_URL = "https://api.ebay.com/identity/v1/oauth2/token"
+EBAY_AUTH_URL = "https://auth.ebay.com/oauth2/authorize"
 
 
 def _post_token(data: dict) -> dict:
@@ -39,4 +40,25 @@ def refresh_token(refresh_token: str):
         "refresh_token": refresh_token,
         "scope": "https://api.ebay.com/oauth/api_scope",
     }
-    return _post_token(data) 
+    return _post_token(data)
+
+
+@router.get("/login")
+def login():
+    """Redirect user to eBay OAuth consent screen."""
+    client_id = os.getenv("EBAY_CLIENT_ID")
+    redirect_uri = os.getenv("EBAY_REDIRECT_URI")
+    if not client_id or not redirect_uri:
+        raise HTTPException(status_code=500, detail="EBAY_CLIENT_ID/EBAY_REDIRECT_URI not configured")
+
+    scope = "https://api.ebay.com/oauth/api_scope https://api.ebay.com/oauth/api_scope/buy.item.bulk https://api.ebay.com/oauth/api_scope/buy.marketplace.insights"
+    params = {
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": scope,
+    }
+    from urllib.parse import urlencode
+    auth_url = f"{EBAY_AUTH_URL}?{urlencode(params)}"
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(auth_url) 
