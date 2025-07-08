@@ -3,154 +3,604 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>eBay Product Search</title>
+    <title>eBay Dropshipping Spy - Advanced Product Search</title>
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            background-color: #f8f9fa;
-            color: #212529;
-            display: flex;
-            justify-content: center;
-            padding-top: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
         }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+
         .container {
-            width: 90%;
-            max-width: 1000px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
         }
+
         h1 {
             text-align: center;
-            color: #343a40;
-            margin-bottom: 30px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            font-weight: 700;
         }
+
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        .search-section {
+            background: rgba(255, 255, 255, 0.95);
+            margin: 20px auto;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
         .search-container {
             display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
+            gap: 15px;
+            margin-bottom: 25px;
         }
+
         #searchInput {
-            flex-grow: 1;
-            padding: 15px;
+            flex: 1;
+            padding: 15px 20px;
             font-size: 16px;
-            border: 1px solid #ced4da;
-            border-radius: 8px;
+            border: 2px solid #e1e8ed;
+            border-radius: 50px;
+            outline: none;
+            transition: all 0.3s ease;
         }
+
+        #searchInput:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
         #searchButton {
-            padding: 15px 25px;
+            padding: 15px 30px;
             font-size: 16px;
-            background-color: #007bff;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 50px;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.3s ease;
+            min-width: 120px;
         }
+
         #searchButton:hover {
-            background-color: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
         }
-        #results-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 20px;
-        }
-        .product-item {
-            background-color: white;
+
+        .filters-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
             border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 15px;
-            text-align: center;
-            transition: transform 0.2s, box-shadow 0.2s;
         }
+
+        .filters-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #495057;
+            font-size: 1.1rem;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .filter-group input,
+        .filter-group select {
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .filter-group input:focus,
+        .filter-group select:focus {
+            border-color: #667eea;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .results-section {
+            margin-top: 30px;
+        }
+
+        .results-header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px 15px 0 0;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .results-count {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .results-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 0 0 15px 15px;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            min-height: 200px;
+        }
+
+        .product-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 15px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
         .product-item:hover {
             transform: translateY(-5px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            border-color: #667eea;
         }
-        .product-item img {
-            max-width: 100%;
-            height: 180px;
+
+        .product-item:hover::before {
+            content: "Click to view on eBay";
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            z-index: 10;
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
             object-fit: cover;
-            border-radius: 6px;
+            border-radius: 10px;
             margin-bottom: 15px;
         }
+
         .product-title {
             font-weight: 600;
-            font-size: 15px;
-            height: 4.5em; /* Approximately 3 lines */
-            overflow: hidden;
+            font-size: 16px;
             margin-bottom: 10px;
+            height: 3em;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-height: 1.5;
         }
+
         .product-price {
             font-weight: bold;
-            font-size: 18px;
+            font-size: 20px;
             color: #28a745;
+            margin-bottom: 10px;
         }
+
+        .product-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .detail-tag {
+            background: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #495057;
+        }
+
+        .detail-tag.condition {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .detail-tag.shipping {
+            background: #cce7ff;
+            color: #004085;
+        }
+
+        .detail-tag.seller {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .seller-info {
+            font-size: 13px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
         .status-message {
             text-align: center;
             font-size: 18px;
             color: #6c757d;
-            padding: 40px;
+            padding: 60px 20px;
+            grid-column: 1 / -1;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .external-link-icon {
+            width: 16px;
+            height: 16px;
+            opacity: 0.7;
+            margin-left: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .search-container {
+                flex-direction: column;
+            }
+
+            .filters-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .results-container {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>eBay Product Search</h1>
-        <div class="search-container">
-            <input type="text" id="searchInput" placeholder="e.g., 'vintage leather jacket'">
-            <button id="searchButton">Search</button>
+    <div class="header">
+        <div class="container">
+            <h1>🔍 eBay Dropshipping Spy</h1>
+            <p class="subtitle">Advanced Product Research & Market Analysis Tool</p>
         </div>
-        <div id="results-container"></div>
+    </div>
+
+    <div class="container">
+        <div class="search-section">
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Enter product keyword (e.g., 'wireless earbuds', 'phone case')">
+                <button id="searchButton">Search Products</button>
+            </div>
+
+            <div class="filters-section">
+                <div class="filters-title">🎯 Advanced Filters</div>
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label for="minPrice">Min Price ($)</label>
+                        <input type="number" id="minPrice" placeholder="e.g., 10" min="0">
+                    </div>
+                    <div class="filter-group">
+                        <label for="maxPrice">Max Price ($)</label>
+                        <input type="number" id="maxPrice" placeholder="e.g., 500" min="0">
+                    </div>
+                    <div class="filter-group">
+                        <label for="condition">Condition</label>
+                        <select id="condition">
+                            <option value="">Any Condition</option>
+                            <option value="NEW">New</option>
+                            <option value="USED">Used</option>
+                            <option value="CERTIFIED_REFURBISHED">Certified Refurbished</option>
+                            <option value="SELLER_REFURBISHED">Seller Refurbished</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="sortOrder">Sort By</label>
+                        <select id="sortOrder">
+                            <option value="bestMatch">Best Match</option>
+                            <option value="price">Price: Low to High</option>
+                            <option value="-price">Price: High to Low</option>
+                            <option value="newlyListed">Newly Listed</option>
+                            <option value="endingSoonest">Ending Soonest</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="minFeedback">Min Seller Feedback</label>
+                        <input type="number" id="minFeedback" placeholder="e.g., 100" min="0">
+                    </div>
+                    <div class="filter-group">
+                        <label for="resultLimit">Results Limit</label>
+                        <select id="resultLimit">
+                            <option value="20">20 items</option>
+                            <option value="50" selected>50 items</option>
+                            <option value="100">100 items</option>
+                            <option value="200">200 items</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="checkbox-group">
+                    <input type="checkbox" id="freeShipping">
+                    <label for="freeShipping">🚚 Free Shipping Only</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="buyItNowOnly">
+                    <label for="buyItNowOnly">💰 Buy It Now Only</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="topRatedSellers">
+                    <label for="topRatedSellers">⭐ Top Rated Sellers Only</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <div class="results-header">
+                <div class="results-count" id="resultsCount">Found 0 products</div>
+                <div class="search-info" id="searchInfo"></div>
+            </div>
+            <div class="results-container" id="resultsContainer"></div>
+        </div>
     </div>
 
     <script>
         const searchInput = document.getElementById('searchInput');
         const searchButton = document.getElementById('searchButton');
-        const resultsContainer = document.getElementById('results-container');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsCount = document.getElementById('resultsCount');
+        const searchInfo = document.getElementById('searchInfo');
+
+        // Filter elements
+        const minPrice = document.getElementById('minPrice');
+        const maxPrice = document.getElementById('maxPrice');
+        const condition = document.getElementById('condition');
+        const sortOrder = document.getElementById('sortOrder');
+        const minFeedback = document.getElementById('minFeedback');
+        const resultLimit = document.getElementById('resultLimit');
+        const freeShipping = document.getElementById('freeShipping');
+        const buyItNowOnly = document.getElementById('buyItNowOnly');
+        const topRatedSellers = document.getElementById('topRatedSellers');
 
         const performSearch = async () => {
             const keyword = searchInput.value.trim();
-            if (!keyword) return;
-
-            resultsContainer.innerHTML = `<div class="status-message">Searching...</div>`;
-
-            try {
-                // Note: The new endpoint is a GET request
-                const response = await fetch(`/api/search?keyword=${encodeURIComponent(keyword)}&limit=50`);
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail.message || 'The API request failed.');
-                }
-
-                const data = await response.json();
-                displayResults(data.results);
-
-            } catch (error) {
-                resultsContainer.innerHTML = `<div class="status-message" style="color: red;">Error: ${error.message}</div>`;
-            }
-        };
-
-        const displayResults = (items) => {
-            if (!items || items.length === 0) {
-                resultsContainer.innerHTML = `<div class="status-message">No products found for that keyword.</div>`;
+            if (!keyword) {
+                alert('Please enter a search keyword');
                 return;
             }
 
-            resultsContainer.innerHTML = items.map(item => `
-                <div class="product-item">
-                    <img src="${item.image?.imageUrl || ''}" alt="${item.title}">
-                    <div class="product-title">${item.title}</div>
-                    <div class="product-price">${item.price.value} ${item.price.currency}</div>
-                </div>
-            `).join('');
+            // Show loading state
+            resultsSection.style.display = 'block';
+            resultsContainer.innerHTML = `<div class="status-message"><div class="loading"></div>Searching eBay for "${keyword}"...</div>`;
+            searchButton.disabled = true;
+            searchButton.textContent = 'Searching...';
+
+            try {
+                // Build query parameters with filters
+                const params = new URLSearchParams({
+                    keyword: keyword,
+                    limit: resultLimit.value
+                });
+
+                // Add filters if specified
+                if (minPrice.value) params.append('min_price', minPrice.value);
+                if (maxPrice.value) params.append('max_price', maxPrice.value);
+                if (condition.value) params.append('condition', condition.value);
+                if (sortOrder.value) params.append('sort', sortOrder.value);
+                if (minFeedback.value) params.append('min_feedback_score', minFeedback.value);
+                if (freeShipping.checked) params.append('free_shipping_only', 'true');
+                if (buyItNowOnly.checked) params.append('buy_it_now_only', 'true');
+                if (topRatedSellers.checked) params.append('top_rated_sellers_only', 'true');
+
+                console.log('Search URL:', `/api/search?${params.toString()}`);
+
+                const response = await fetch(`/api/search?${params.toString()}`);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail?.message || `HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('Search response:', data);
+                displayResults(data);
+
+            } catch (error) {
+                console.error('Search error:', error);
+                resultsContainer.innerHTML = `<div class="status-message" style="color: #dc3545;">❌ Error: ${error.message}</div>`;
+            } finally {
+                searchButton.disabled = false;
+                searchButton.textContent = 'Search Products';
+            }
         };
 
+        const displayResults = (data) => {
+            const items = data.results || [];
+            const totalFound = data.total_found || 0;
+            const searchMetadata = data.search_metadata || {};
+
+            // Update results count and info
+            resultsCount.textContent = `Found ${totalFound.toLocaleString()} products`;
+            searchInfo.textContent = `Showing ${items.length} results`;
+
+            if (!items || items.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="status-message">
+                        📦 No products found for "${searchMetadata.keyword}".
+                        <br><br>
+                        Try:
+                        <ul style="text-align: left; display: inline-block; margin-top: 10px;">
+                            <li>Different keywords</li>
+                            <li>Removing some filters</li>
+                            <li>Checking spelling</li>
+                        </ul>
+                    </div>
+                `;
+                return;
+            }
+
+            resultsContainer.innerHTML = items.map(item => {
+                const price = item.price || {};
+                const seller = item.seller || {};
+                const image = item.image_url || item.image?.imageUrl || 'https://via.placeholder.com/200x200?text=No+Image';
+                
+                // Get the eBay link (prefer affiliate link, fallback to direct link)
+                const ebayLink = item.item_affiliate_web_url || item.item_web_url || item.view_item_url || '#';
+                
+                // Build detail tags
+                const detailTags = [];
+                if (item.condition) detailTags.push(`<span class="detail-tag condition">${item.condition}</span>`);
+                if (item.free_shipping) detailTags.push(`<span class="detail-tag shipping">Free Shipping</span>`);
+                if (item.listing_type && item.listing_type !== 'UNKNOWN') detailTags.push(`<span class="detail-tag">${item.listing_type.replace('_', ' ')}</span>`);
+                if (item.watch_count) detailTags.push(`<span class="detail-tag">👀 ${item.watch_count} watching</span>`);
+                if (item.bid_count > 0) detailTags.push(`<span class="detail-tag">🔥 ${item.bid_count} bids</span>`);
+
+                const sellerInfo = seller.username ? 
+                    `Seller: ${seller.username} (${seller.feedbackPercentage || 'N/A'}% • ${seller.feedbackScore || 0} feedback)` : 
+                    'Seller info not available';
+
+                return `
+                    <div class="product-item" onclick="openEbayLink('${ebayLink}', '${item.title?.replace(/'/g, "\\'")}')">
+                        <img src="${image}" alt="${item.title || 'Product'}" class="product-image" onerror="this.src='https://via.placeholder.com/200x200?text=No+Image'">
+                        <div class="product-title">${item.title || 'No title available'}</div>
+                        <div class="product-price">
+                            ${price.value ? `$${price.value}` : 'Price not available'}
+                            ${price.currency && price.currency !== 'USD' ? ` ${price.currency}` : ''}
+                        </div>
+                        <div class="product-details">
+                            ${detailTags.join('')}
+                        </div>
+                        <div class="seller-info">${sellerInfo}</div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        // Function to open eBay link
+        const openEbayLink = (url, title) => {
+            if (url && url !== '#') {
+                console.log(`Opening eBay link for: ${title}`);
+                console.log(`URL: ${url}`);
+                window.open(url, '_blank', 'noopener,noreferrer');
+            } else {
+                alert('eBay link not available for this item');
+            }
+        };
+
+        // Event listeners
         searchButton.addEventListener('click', performSearch);
         searchInput.addEventListener('keypress', (event) => {
             if (event.key === 'Enter') {
                 performSearch();
             }
         });
+
+        // Auto-search when filters change (with debounce)
+        let searchTimeout;
+        const debounceSearch = () => {
+            clearTimeout(searchTimeout);
+            if (searchInput.value.trim()) {
+                searchTimeout = setTimeout(performSearch, 1000);
+            }
+        };
+
+        [minPrice, maxPrice, condition, sortOrder, minFeedback, freeShipping, buyItNowOnly, topRatedSellers].forEach(element => {
+            element.addEventListener('change', debounceSearch);
+        });
+
+        // Clear results when search input changes
+        searchInput.addEventListener('input', () => {
+            if (!searchInput.value.trim()) {
+                resultsSection.style.display = 'none';
+            }
+        });
+
+        // Add some sample search suggestions
+        const searchSuggestions = [
+            'wireless earbuds',
+            'phone case',
+            'fitness tracker',
+            'laptop stand',
+            'bluetooth speaker',
+            'coffee maker',
+            'gaming headset',
+            'smart watch'
+        ];
+
+        // Add placeholder rotation
+        let placeholderIndex = 0;
+        setInterval(() => {
+            searchInput.placeholder = `Enter product keyword (e.g., '${searchSuggestions[placeholderIndex]}')`;
+            placeholderIndex = (placeholderIndex + 1) % searchSuggestions.length;
+        }, 3000);
     </script>
 </body>
 </html>
