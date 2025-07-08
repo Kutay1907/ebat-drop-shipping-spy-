@@ -443,7 +443,7 @@ class EbayAPIClient:
             return self._application_token_cache
             
         if not self.client_id or not self.client_secret:
-            logger.error("eBay client credentials not configured")
+            logger.error("CRITICAL: eBay client credentials not configured. Make sure EBAY_CLIENT_ID and EBAY_CLIENT_SECRET are set in your environment.")
             return None
             
         try:
@@ -455,7 +455,7 @@ class EbayAPIClient:
                 logger.info("Successfully obtained eBay application token")
                 return self._application_token_cache
         except Exception as e:
-            logger.error(f"Failed to get eBay application token: {e}")
+            logger.error(f"CRITICAL: An exception occurred while trying to get the eBay application token: {e}")
             
         return None
     
@@ -469,31 +469,42 @@ class EbayAPIClient:
     async def _request_application_token(self) -> Optional[Dict[str, Any]]:
         """Request new application token from eBay."""
         import base64
-        
+
+        logger.info(f"Attempting to request eBay application token. Client ID loaded: {bool(self.client_id)}")
+
+        if not self.client_id or not self.client_secret:
+            logger.error("CRITICAL: Cannot request token because EBAY_CLIENT_ID or EBAY_CLIENT_SECRET are missing.")
+            return None
+
         # Prepare authentication
         credentials = f"{self.client_id}:{self.client_secret}"
         auth_header = base64.b64encode(credentials.encode()).decode()
-        
+
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
             "Authorization": f"Basic {auth_header}"
         }
-        
+
         data = {
             "grant_type": "client_credentials",
             "scope": "https://api.ebay.com/oauth/api_scope"
         }
-        
+
         url = urljoin(self.base_url, "/identity/v1/oauth2/token")
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.post(url, headers=headers, data=data, timeout=15)
-            
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, headers=headers, data=data, timeout=15)
+
             if response.status_code == 200:
+                logger.info("Successfully received token from eBay.")
                 return response.json()
             else:
-                logger.error(f"Token request failed: {response.status_code} - {response.text}")
+                logger.error(f"CRITICAL: eBay token request failed with status {response.status_code}. Response: {response.text}")
                 return None
+        except Exception as e:
+            logger.error(f"CRITICAL: An unexpected error occurred during the httpx request to eBay: {e}")
+            return None
     
     async def _invalidate_application_token(self) -> None:
         """Invalidate cached application token to force refresh."""
