@@ -1,8 +1,11 @@
+import logging
 from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, Any
 
 # Import the API client
 from app.ebay_api_client import ebay_client, EbayAPIError
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["search"])
 
@@ -28,7 +31,8 @@ async def search_products(
             "total_found": results.get("total", 0)
         }
     except EbayAPIError as e:
-        # If the eBay API returns an error, pass it on
+        # Log the specific error from the API client before re-raising
+        logger.error(f"Caught EbayAPIError in search_products: {e.message}")
         raise HTTPException(
             status_code=e.status_code or 500,
             detail={"error": "eBay API Error", "message": e.message}

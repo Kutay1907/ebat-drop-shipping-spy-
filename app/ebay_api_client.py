@@ -113,7 +113,14 @@ class EbayAPIClient:
         # Client credentials from environment
         self.client_id = os.getenv("EBAY_CLIENT_ID")
         self.client_secret = os.getenv("EBAY_CLIENT_SECRET")
-        
+
+        if not self.client_id or not self.client_secret:
+            logger.critical("CRITICAL: EBAY_CLIENT_ID and/or EBAY_CLIENT_SECRET environment variables not set.")
+            # In a real app, you might raise an exception here to prevent startup
+            # raise ValueError("eBay API credentials are not configured.")
+        else:
+            logger.info("Successfully loaded eBay API credentials.")
+
         logger.info(f"Initialized eBay API Client for {environment.value}")
 
     async def call_api(
