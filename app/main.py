@@ -31,24 +31,19 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down...")
 
+app = FastAPI(
+    title="eBay Dropshipping Spy API",
+    description="Professional eBay product research and API integration platform",
+    version="2.0.0",
+    lifespan=lifespan
+)
 
-app = FastAPI(title="Revolist API", version="1.0.0", lifespan=lifespan)
+# Import and register routes
+from app.search_routes import router as search_router
+from app.auth_routes import router as auth_router
 
-# Import and register routes after app creation
-try:
-    from app.auth_routes import router as auth_router
-    from app.search_routes import router as search_router
-    
-    app.include_router(auth_router)
-    app.include_router(search_router)
-    logger.info("Routes registered successfully")
-except Exception as e:
-    logger.error(f"Failed to register routes: {e}")
-
-# Health
-@app.get("/health")
-async def health():
-    return {"status": "ok", "service": "revolist-api"}
+app.include_router(search_router)
+app.include_router(auth_router)
 
 # Add a debug endpoint
 @app.get("/debug/env")
@@ -61,211 +56,485 @@ async def debug_env():
         env_status[var] = "SET" if value else "NOT_SET"
     return {"environment": env_status}
 
+# Enhanced HTML with comprehensive eBay API documentation and modern UI
 HTML_HOME = """
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Revolist – eBay Dropshipping Tool</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eBay Dropshipping Spy - Professional Product Research</title>
     <style>
-        body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;margin:0;padding:40px;}
-        .card{max-width:700px;margin:0 auto;background:#fff;padding:30px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);}
-        h1{text-align:center;color:#333;}
-        .btn{display:inline-block;margin:10px 0;padding:10px 20px;background:#0064d2;color:#fff;text-decoration:none;border-radius:5px;text-decoration:none;border:none;cursor:pointer;}
-        .btn:hover{background:#0056b3;}
-        .btn.secondary{background:#6c757d;}
-        .btn.test{background:#28a745;}
-        .btn.token{background:#17a2b8;}
-        input[type=text], textarea{width:70%;padding:10px;border:1px solid #ccc;border-radius:5px;font-family:monospace;}
-        textarea{height:80px;resize:vertical;}
-        .status{margin:10px 0;padding:10px;border-radius:5px;}
-        .success{background:#d4edda;color:#155724;border:1px solid #c3e6cb;}
-        .error{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;}
-        .info{background:#d1ecf1;color:#0c5460;border:1px solid #bee5eb;}
-        .warning{background:#fff3cd;color:#856404;border:1px solid #ffeaa7;}
-        .collapsible{margin:10px 0;}
-        .toggle{cursor:pointer;padding:10px;background:#f8f9fa;border:1px solid #dee2e6;border-radius:5px;}
-        .content{display:none;padding:15px;border:1px solid #dee2e6;border-top:none;}
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; color: white; margin-bottom: 40px; }
+        .header h1 { font-size: 3rem; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .header p { font-size: 1.2rem; opacity: 0.9; }
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; margin-bottom: 40px; }
+        .card { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: transform 0.3s ease; }
+        .card:hover { transform: translateY(-5px); }
+        .card h3 { color: #333; margin-bottom: 15px; font-size: 1.4rem; }
+        .card p { color: #666; margin-bottom: 20px; line-height: 1.6; }
+        .btn { display: inline-block; padding: 12px 25px; background: #667eea; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: background 0.3s ease; border: none; cursor: pointer; }
+        .btn:hover { background: #5a6fd8; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #545b62; }
+        .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 30px; }
+        .feature { background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #667eea; }
+        .feature h4 { color: #333; margin-bottom: 10px; }
+        .feature p { color: #666; font-size: 0.9rem; }
+        .status-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+        .status-online { background: #28a745; }
+        .status-offline { background: #dc3545; }
+        .api-demo { background: #f8f9fa; border-radius: 10px; padding: 25px; margin-top: 30px; }
+        .code-block { background: #2d3748; color: #e2e8f0; padding: 20px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9rem; overflow-x: auto; margin: 15px 0; }
+        .endpoint { background: #e8f4fd; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #0066cc; }
+        .method-get { background: #d4edda; border-left-color: #28a745; }
+        .method-post { background: #fff3cd; border-left-color: #ffc107; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0; }
+        .stat { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; text-align: center; color: white; }
+        .stat h3 { font-size: 2rem; margin-bottom: 5px; }
+        .stat p { opacity: 0.9; }
+        .demo-section { background: white; border-radius: 15px; padding: 30px; margin-top: 30px; }
+        .demo-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .demo-input { padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem; width: 100%; }
+        .demo-results { background: #f8f9fa; border-radius: 8px; padding: 20px; margin-top: 20px; min-height: 200px; }
+        .loading { text-align: center; color: #666; font-style: italic; }
+        .tab-container { margin-top: 30px; }
+        .tabs { display: flex; background: #f8f9fa; border-radius: 10px 10px 0 0; overflow: hidden; }
+        .tab { padding: 15px 25px; background: #e9ecef; border: none; cursor: pointer; font-weight: 600; color: #666; flex: 1; }
+        .tab.active { background: white; color: #333; border-bottom: 3px solid #667eea; }
+        .tab-content { background: white; padding: 30px; border-radius: 0 0 10px 10px; min-height: 400px; }
+        .hidden { display: none; }
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2rem; }
+            .cards { grid-template-columns: 1fr; }
+            .demo-controls { grid-template-columns: 1fr; }
+            .tabs { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h1>🛍️ Revolist</h1>
-        <p><strong>eBay Dropshipping Research Tool</strong></p>
-        
-        <div class="info">
-            <strong>🎯 Multiple Ways to Connect:</strong><br>
-            1. <strong>Automatic</strong>: Set EBAY_CLIENT_ID + EBAY_CLIENT_SECRET (recommended)<br>
-            2. <strong>Manual Token</strong>: Paste your existing eBay OAuth token below<br>
-            3. <strong>Environment</strong>: Set EBAY_OAUTH_TOKEN in environment variables
-        </div>
-        
-        <div>
-            <a class="btn test" href="#" onclick="testAllTokens()">🧪 Test All Connections</a>
-            <a class="btn secondary" href="/auth/login">🔑 Get New eBay Token</a>
-            <a class="btn secondary" href="/about">ℹ️ About</a>
-            <a class="btn secondary" href="/health">💓 Health</a>
-            <a class="btn secondary" href="/docs">📄 API Docs</a>
-        </div>
-        
-        <div id="tokenStatus"></div>
-        
-        <!-- Manual Token Input Section -->
-        <div class="collapsible">
-            <div class="toggle" onclick="toggleSection('tokenSection')">
-                📝 <strong>Option 2: Use Your Existing eBay Token</strong> (Click to expand)
-            </div>
-            <div id="tokenSection" class="content">
-                <p>If you already have an eBay OAuth token, paste it here:</p>
-                <textarea id="manualToken" placeholder="Paste your eBay OAuth token here (starts with v^1.1#...)"></textarea><br>
-                <button class="btn token" onclick="testManualToken()">Test This Token</button>
-                <button class="btn" onclick="searchWithManualToken()">Search with This Token</button>
-                <div id="manualTokenStatus"></div>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 eBay Dropshipping Spy</h1>
+            <p>Professional Product Research & API Integration Platform</p>
+            <div class="stats">
+                <div class="stat">
+                    <h3>∞</h3>
+                    <p>API Endpoints</p>
+                </div>
+                <div class="stat">
+                    <h3>10+</h3>
+                    <p>Marketplaces</p>
+                </div>
+                <div class="stat">
+                    <h3>24/7</h3>
+                    <p>Uptime</p>
+                </div>
+                <div class="stat">
+                    <h3>Real-time</h3>
+                    <p>Data</p>
+                </div>
             </div>
         </div>
-        
-        <hr>
-        <h3>🔍 Product Search</h3>
-        <form id="searchForm">
-            <input type="text" id="keyword" placeholder="Enter keyword (e.g., 'laptop', 'drone', 'shoes')..." required>
-            <button class="btn" type="submit">Search eBay</button>
-        </form>
-        
-        <div id="searchStatus"></div>
-        <pre id="results"></pre>
+
+        <div class="cards">
+            <div class="card">
+                <h3>🚀 Quick Product Search</h3>
+                <p>Search millions of eBay products instantly. Get real-time pricing, availability, and seller information for your dropshipping research.</p>
+                <button class="btn" onclick="openTab('search')">Start Searching</button>
+                <a href="/api/health" class="btn btn-secondary" style="margin-left: 10px;">API Status</a>
+            </div>
+
+            <div class="card">
+                <h3>⚡ Advanced API Integration</h3>
+                <p>Convert any eBay API Explorer call into working Python code. Support for all HTTP methods and eBay endpoints with automatic authentication.</p>
+                <button class="btn" onclick="openTab('api')">API Explorer</button>
+                <a href="/api/test-connection" class="btn btn-secondary" style="margin-left: 10px;">Test Connection</a>
+            </div>
+
+            <div class="card">
+                <h3>🔧 Professional Features</h3>
+                <p>Advanced filters, multiple marketplaces, rate limiting, error handling, and automatic token management for production use.</p>
+                <button class="btn" onclick="openTab('features')">View Features</button>
+                <a href="/api/marketplace/info" class="btn btn-secondary" style="margin-left: 10px;">Marketplaces</a>
+            </div>
+        </div>
+
+        <div class="tab-container">
+            <div class="tabs">
+                <button class="tab active" onclick="openTab('search')">Product Search</button>
+                <button class="tab" onclick="openTab('api')">API Integration</button>
+                <button class="tab" onclick="openTab('features')">Advanced Features</button>
+                <button class="tab" onclick="openTab('docs')">Documentation</button>
+            </div>
+
+            <div id="search" class="tab-content">
+                <h3>🔍 eBay Product Search</h3>
+                <p>Search millions of eBay products with advanced filtering and real-time data.</p>
+                
+                <div class="demo-controls">
+                    <input type="text" id="searchKeyword" class="demo-input" placeholder="Enter product keyword (e.g., 'wireless headphones')" value="laptop">
+                    <select id="marketplace" class="demo-input">
+                        <option value="EBAY_US">United States (USD)</option>
+                        <option value="EBAY_GB">United Kingdom (GBP)</option>
+                        <option value="EBAY_DE">Germany (EUR)</option>
+                        <option value="EBAY_AU">Australia (AUD)</option>
+                        <option value="EBAY_CA">Canada (CAD)</option>
+                    </select>
+                    <select id="sortOrder" class="demo-input">
+                        <option value="price">Price (Low to High)</option>
+                        <option value="-price">Price (High to Low)</option>
+                        <option value="newlyListed">Newly Listed</option>
+                        <option value="endingSoonest">Ending Soon</option>
+                    </select>
+                    <button class="btn" onclick="searchProducts()">Search Products</button>
+                </div>
+
+                <div id="searchResults" class="demo-results">
+                    <p class="loading">Click "Search Products" to see live eBay data...</p>
+                </div>
+            </div>
+
+            <div id="api" class="tab-content hidden">
+                <h3>⚡ Direct eBay API Integration</h3>
+                <p>Convert any eBay API Explorer call into working code. Perfect for developers who want full control.</p>
+
+                <div class="endpoint method-post">
+                    <strong>POST /api/api-call</strong> - Execute any eBay API endpoint
+                </div>
+
+                <div class="demo-controls">
+                    <select id="apiMethod" class="demo-input">
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                    <input type="text" id="apiEndpoint" class="demo-input" placeholder="eBay API endpoint" value="/buy/browse/v1/item_summary/search">
+                    <input type="text" id="apiToken" class="demo-input" placeholder="Optional: Your eBay OAuth token">
+                    <button class="btn" onclick="testApiCall()">Execute API Call</button>
+                </div>
+
+                <div style="margin: 20px 0;">
+                    <label><strong>Query Parameters (JSON):</strong></label>
+                    <textarea id="apiParams" class="demo-input" rows="3" placeholder='{"q": "drone", "limit": 5}'>{
+  "q": "smartphone",
+  "limit": 10,
+  "sort": "price"
+}</textarea>
+                </div>
+
+                <div id="apiResults" class="demo-results">
+                    <p class="loading">Click "Execute API Call" to test the direct API integration...</p>
+                </div>
+            </div>
+
+            <div id="features" class="tab-content hidden">
+                <h3>🔧 Advanced Features</h3>
+                <div class="feature-grid">
+                    <div class="feature">
+                        <h4>🔐 Multi-Token Authentication</h4>
+                        <p>Supports Application Tokens, User OAuth, and manual token override with automatic refresh.</p>
+                    </div>
+                    <div class="feature">
+                        <h4>🌍 Global Marketplaces</h4>
+                        <p>Access eBay data from US, UK, Germany, Australia, Canada and 5+ more countries.</p>
+                    </div>
+                    <div class="feature">
+                        <h4>⚡ Rate Limiting</h4>
+                        <p>Smart rate limiting with exponential backoff to prevent API throttling.</p>
+                    </div>
+                    <div class="feature">
+                        <h4>🔄 Auto Retry Logic</h4>
+                        <p>Automatic retries for failed requests with intelligent error handling.</p>
+                    </div>
+                    <div class="feature">
+                        <h4>📊 Advanced Filters</h4>
+                        <p>Price ranges, item conditions, locations, categories, and custom filters.</p>
+                    </div>
+                    <div class="feature">
+                        <h4>🏗️ Production Ready</h4>
+                        <p>Comprehensive logging, error handling, and monitoring for enterprise use.</p>
+                    </div>
+                </div>
+
+                <div class="api-demo">
+                    <h4>🧪 Live Feature Test</h4>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
+                        <button class="btn" onclick="testConnection()">Test Connection</button>
+                        <button class="btn" onclick="testAdvancedSearch()">Advanced Search</button>
+                        <button class="btn" onclick="testMarketplaces()">Test Marketplaces</button>
+                        <button class="btn" onclick="viewItemDetails()">Item Details</button>
+                    </div>
+                    <div id="featureResults" class="demo-results">
+                        <p class="loading">Click any test button above to see live API responses...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="docs" class="tab-content hidden">
+                <h3>📚 API Documentation</h3>
+                
+                <div class="endpoint method-get">
+                    <strong>GET /api/search</strong> - Basic product search
+                </div>
+                <div class="code-block">
+curl -X POST "/api/search" \\
+  -H "Content-Type: application/json" \\
+  -d '{"keyword": "laptop", "limit": 20, "marketplace": "EBAY_US"}'</div>
+
+                <div class="endpoint method-post">
+                    <strong>POST /api/search/advanced</strong> - Advanced search with filters
+                </div>
+                <div class="code-block">
+curl -X POST "/api/search/advanced" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "keyword": "smartphone",
+    "min_price": 100,
+    "max_price": 500,
+    "condition": "NEW",
+    "category_ids": ["9355"]
+  }'</div>
+
+                <div class="endpoint method-post">
+                    <strong>POST /api/api-call</strong> - Direct eBay API access
+                </div>
+                <div class="code-block">
+curl -X POST "/api/api-call" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "method": "GET",
+    "endpoint": "/buy/browse/v1/item_summary/search",
+    "params": {"q": "drone", "limit": 10},
+    "token": "your_ebay_token_here"
+  }'</div>
+
+                <div class="endpoint method-get">
+                    <strong>GET /api/item/{item_id}</strong> - Get detailed item information
+                </div>
+                <div class="code-block">
+curl -X GET "/api/item/v1|123456789|0" \\
+  -H "Accept: application/json"</div>
+
+                <h4 style="margin-top: 30px; color: #333;">Python Integration Example</h4>
+                <div class="code-block">
+import httpx
+import asyncio
+
+async def search_ebay_products():
+    async with httpx.AsyncClient() as client:
+        response = await client.post("https://your-app.railway.app/api/search", 
+            json={
+                "keyword": "wireless headphones",
+                "limit": 50,
+                "sort": "price",
+                "marketplace": "EBAY_US"
+            }
+        )
+        return response.json()
+
+# Run the search
+results = asyncio.run(search_ebay_products())
+print(f"Found {results['total_found']} products")</div>
+
+                <h4 style="margin-top: 30px; color: #333;">Environment Variables</h4>
+                <div class="code-block">
+# Required for Application Token (Recommended)
+EBAY_CLIENT_ID=your_ebay_app_id
+EBAY_CLIENT_SECRET=your_ebay_cert_id
+
+# Optional for User OAuth
+EBAY_OAUTH_TOKEN=your_user_token
+EBAY_REDIRECT_URI=https://your-app.railway.app/auth/callback</div>
+            </div>
+        </div>
     </div>
 
-<script>
-function toggleSection(sectionId) {
-    const section = document.getElementById(sectionId);
-    section.style.display = section.style.display === 'block' ? 'none' : 'block';
-}
+    <script>
+        function openTab(tabName) {
+            // Hide all tab contents
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.add('hidden'));
+            
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.remove('hidden');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
 
-async function testAllTokens() {
-    const statusDiv = document.getElementById('tokenStatus');
-    statusDiv.innerHTML = '<div class="info">Testing all eBay connections...</div>';
-    
-    try {
-        const res = await fetch('/api/search/test-token');
-        const data = await res.json();
-        
-        let html = '<div class="success"><strong>✅ Connection Test Results:</strong><br>';
-        data.tests.forEach(test => {
-            const icon = test.status === 'success' ? '✅' : test.status === 'failed' ? '❌' : '⚠️';
-            html += `${icon} ${test.type}: ${test.message}<br>`;
-            if (test.token_preview) {
-                html += `&nbsp;&nbsp;&nbsp;Token: ${test.token_preview}<br>`;
+        async function searchProducts() {
+            const keyword = document.getElementById('searchKeyword').value;
+            const marketplace = document.getElementById('marketplace').value;
+            const sort = document.getElementById('sortOrder').value;
+            const resultsDiv = document.getElementById('searchResults');
+            
+            resultsDiv.innerHTML = '<p class="loading">Searching eBay products...</p>';
+            
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ keyword, marketplace, sort, limit: 10 })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    let html = `<h4>Found ${data.total_found} products in ${data.marketplace}</h4>`;
+                    data.results.slice(0, 5).forEach(item => {
+                        html += `
+                            <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px;">
+                                <h5>${item.title}</h5>
+                                <p><strong>Price:</strong> ${item.price?.value} ${item.price?.currency}</p>
+                                <p><strong>Condition:</strong> ${item.condition || 'N/A'}</p>
+                                <p><strong>Seller:</strong> ${item.seller?.username} (${item.seller?.feedbackScore} feedback)</p>
+                                ${item.image?.imageUrl ? `<img src="${item.image.imageUrl}" style="max-width: 100px; max-height: 100px; object-fit: cover;">` : ''}
+                            </div>
+                        `;
+                    });
+                    resultsDiv.innerHTML = html;
+                } else {
+                    resultsDiv.innerHTML = `<p style="color: red;">Error: ${data.detail?.message || 'Search failed'}</p>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Network error: ${error.message}</p>`;
             }
-        });
-        html += `<br><strong>${data.recommendation}</strong></div>`;
-        statusDiv.innerHTML = html;
-    } catch (err) {
-        statusDiv.innerHTML = `<div class="error">❌ Connection test failed: ${err.message}</div>`;
-    }
-}
-
-async function testManualToken() {
-    const token = document.getElementById('manualToken').value.trim();
-    const statusDiv = document.getElementById('manualTokenStatus');
-    
-    if (!token) {
-        statusDiv.innerHTML = '<div class="warning">⚠️ Please enter a token first</div>';
-        return;
-    }
-    
-    statusDiv.innerHTML = '<div class="info">Testing your token...</div>';
-    
-    try {
-        const res = await fetch('/api/search/with-token', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({token: token, keyword: 'test'})
-        });
-        
-        if (res.ok) {
-            const data = await res.json();
-            statusDiv.innerHTML = `<div class="success">✅ Token works! Preview: ${data.token_preview}</div>`;
-        } else {
-            const error = await res.json();
-            statusDiv.innerHTML = `<div class="error">❌ Token test failed: ${error.detail}</div>`;
         }
-    } catch (err) {
-        statusDiv.innerHTML = `<div class="error">❌ Error testing token: ${err.message}</div>`;
-    }
-}
 
-async function searchWithManualToken() {
-    const token = document.getElementById('manualToken').value.trim();
-    const keyword = document.getElementById('keyword').value.trim() || 'laptop';
-    
-    if (!token) {
-        document.getElementById('manualTokenStatus').innerHTML = '<div class="warning">⚠️ Please enter a token first</div>';
-        return;
-    }
-    
-    document.getElementById('searchStatus').innerHTML = '<div class="info">Searching with your token...</div>';
-    
-    try {
-        const res = await fetch('/api/search', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({keyword: keyword, token: token})
-        });
-        
-        const data = await res.json();
-        
-        if (res.ok) {
-            document.getElementById('searchStatus').innerHTML = 
-                `<div class="success">✅ Found ${data.total_found} products for "${data.keyword}" using ${data.token_type} token</div>`;
-            document.getElementById('results').textContent = JSON.stringify(data, null, 2);
-        } else {
-            document.getElementById('searchStatus').innerHTML = 
-                `<div class="error">❌ Search failed: ${data.detail}</div>`;
+        async function testApiCall() {
+            const method = document.getElementById('apiMethod').value;
+            const endpoint = document.getElementById('apiEndpoint').value;
+            const token = document.getElementById('apiToken').value;
+            const paramsText = document.getElementById('apiParams').value;
+            const resultsDiv = document.getElementById('apiResults');
+            
+            resultsDiv.innerHTML = '<p class="loading">Executing API call...</p>';
+            
+            try {
+                let params = {};
+                if (paramsText.trim()) {
+                    params = JSON.parse(paramsText);
+                }
+                
+                const payload = {
+                    method: method,
+                    endpoint: endpoint,
+                    params: method === 'GET' ? params : null,
+                    json_data: method !== 'GET' ? params : null
+                };
+                
+                if (token) payload.token = token;
+                
+                const response = await fetch('/api/api-call', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                resultsDiv.innerHTML = `
+                    <h4>API Response</h4>
+                    <pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 0.8rem;">${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
         }
-    } catch (err) {
-        document.getElementById('searchStatus').innerHTML = 
-            `<div class="error">❌ Search error: ${err.message}</div>`;
-    }
-}
 
-document.getElementById('searchForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const kw = document.getElementById('keyword').value.trim();
-    const statusDiv = document.getElementById('searchStatus');
-    const resultsDiv = document.getElementById('results');
-    
-    if (!kw) return;
-    
-    statusDiv.innerHTML = '<div class="info">Searching eBay products...</div>';
-    resultsDiv.textContent = '';
-    
-    try {
-        const res = await fetch('/api/search', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({keyword: kw})
-        });
-        
-        const data = await res.json();
-        
-        if (res.ok) {
-            statusDiv.innerHTML = `<div class="success">✅ Found ${data.total_found} products for "${data.keyword}" using ${data.token_type} token</div>`;
-            resultsDiv.textContent = JSON.stringify(data, null, 2);
-        } else {
-            statusDiv.innerHTML = `<div class="error">❌ Search failed: ${data.detail}</div>`;
+        async function testConnection() {
+            const resultsDiv = document.getElementById('featureResults');
+            resultsDiv.innerHTML = '<p class="loading">Testing connection...</p>';
+            
+            try {
+                const response = await fetch('/api/test-connection');
+                const data = await response.json();
+                
+                resultsDiv.innerHTML = `
+                    <h4>Connection Test Results</h4>
+                    <pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
         }
-    } catch (err) {
-        statusDiv.innerHTML = `<div class="error">❌ Search error: ${err.message}</div>`;
-    }
-});
 
-// Pre-fill token if provided via URL parameter
-const urlParams = new URLSearchParams(window.location.search);
-const tokenParam = urlParams.get('token');
-if (tokenParam) {
-    document.getElementById('manualToken').value = tokenParam;
-    toggleSection('tokenSection');
-}
-</script>
+        async function testAdvancedSearch() {
+            const resultsDiv = document.getElementById('featureResults');
+            resultsDiv.innerHTML = '<p class="loading">Testing advanced search...</p>';
+            
+            try {
+                const response = await fetch('/api/search/advanced', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        keyword: "smartphone",
+                        min_price: 100,
+                        max_price: 300,
+                        condition: "NEW",
+                        limit: 5
+                    })
+                });
+                
+                const data = await response.json();
+                resultsDiv.innerHTML = `
+                    <h4>Advanced Search Results</h4>
+                    <pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testMarketplaces() {
+            const resultsDiv = document.getElementById('featureResults');
+            resultsDiv.innerHTML = '<p class="loading">Loading marketplace info...</p>';
+            
+            try {
+                const response = await fetch('/api/marketplace/info');
+                const data = await response.json();
+                
+                resultsDiv.innerHTML = `
+                    <h4>Available Marketplaces</h4>
+                    <pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function viewItemDetails() {
+            const resultsDiv = document.getElementById('featureResults');
+            resultsDiv.innerHTML = '<p class="loading">This would show detailed item information...</p>';
+            
+            // For demo purposes, show the API endpoint documentation
+            resultsDiv.innerHTML = `
+                <h4>Item Details API</h4>
+                <p><strong>Endpoint:</strong> GET /api/item/{item_id}</p>
+                <p><strong>Description:</strong> Get detailed information for any eBay item including images, specifications, seller info, and more.</p>
+                <div class="code-block">
+// Example usage:
+const response = await fetch('/api/item/v1|123456789|0?fieldgroups=PRODUCT,EXTENDED');
+const itemData = await response.json();
+console.log(itemData.item_data);
+                </div>
+            `;
+        }
+
+        // Auto-open search tab on load
+        document.addEventListener('DOMContentLoaded', function() {
+            openTab('search');
+        });
+    </script>
 </body>
 </html>
 """
@@ -274,38 +543,78 @@ HTML_ABOUT = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>About - Revolist</title>
+    <title>About - eBay Dropshipping Spy</title>
     <style>
-        body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;margin:0;padding:40px;}
-        .card{max-width:700px;margin:0 auto;background:#fff;padding:30px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);}
-        h1{text-align:center;color:#333;}
-        .btn{display:inline-block;margin:10px 0;padding:10px 20px;background:#0064d2;color:#fff;text-decoration:none;border-radius:5px;}
+        body{font-family:Arial,Helvetica,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);margin:0;padding:40px;}
+        .card{max-width:800px;margin:0 auto;background:#fff;padding:40px;border-radius:15px;box-shadow:0 10px 30px rgba(0,0,0,0.2);}
+        h1{text-align:center;color:#333;margin-bottom:30px;}
+        .feature{background:#f8f9fa;padding:20px;margin:20px 0;border-radius:10px;border-left:4px solid #667eea;}
+        .btn{display:inline-block;margin:10px 5px;padding:12px 25px;background:#667eea;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;}
+        .btn:hover{background:#5a6fd8;}
+        .tech-stack{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin:30px 0;}
+        .tech{background:#e8f4fd;padding:15px;border-radius:8px;text-align:center;}
     </style>
 </head>
 <body>
     <div class="card">
-        <h1>About Revolist</h1>
-        <p>Revolist is a powerful eBay dropshipping research tool that helps you find profitable products to sell.</p>
+        <h1>🚀 About eBay Dropshipping Spy</h1>
         
-        <h3>🚀 Features</h3>
-        <ul>
-            <li><strong>Instant Product Search</strong> - No eBay login required for basic searches</li>
-            <li><strong>Real-time eBay Data</strong> - Direct access to eBay Browse API</li>
-            <li><strong>Application Token Auth</strong> - Seamless API access</li>
-            <li><strong>Optional OAuth Integration</strong> - For advanced user-specific features</li>
-            <li><strong>Product Analytics</strong> - Detailed item information and insights</li>
-        </ul>
+        <p>A professional-grade eBay product research and API integration platform built for modern dropshipping businesses and developers.</p>
         
-        <h3>🔧 How It Works</h3>
-        <p>Revolist uses eBay's official Application Token system (Client Credentials flow) for public product data. This means:</p>
-        <ul>
-            <li>✅ Immediate access - no user consent required</li>
-            <li>✅ Automatic token refresh</li>
-            <li>✅ Full eBay Browse API access</li>
-            <li>✅ Real-time product data</li>
-        </ul>
+        <div class="feature">
+            <h3>🎯 What We Do</h3>
+            <p>We provide real-time access to eBay's vast product catalog with powerful search, filtering, and analysis tools. Our platform converts complex eBay API calls into simple, developer-friendly endpoints.</p>
+        </div>
         
-        <a class="btn" href="/">← Back to Home</a>
+        <div class="feature">
+            <h3>⚡ Key Features</h3>
+            <ul>
+                <li><strong>Universal API Access:</strong> Convert any eBay API Explorer call into working Python code</li>
+                <li><strong>Multi-Token Authentication:</strong> Application Tokens, User OAuth, and manual overrides</li>
+                <li><strong>Global Marketplace Support:</strong> US, UK, Germany, Australia, Canada, and more</li>
+                <li><strong>Advanced Filtering:</strong> Price ranges, conditions, locations, categories</li>
+                <li><strong>Production Ready:</strong> Rate limiting, retries, logging, error handling</li>
+                <li><strong>Real-time Data:</strong> Live pricing, availability, and seller information</li>
+            </ul>
+        </div>
+        
+        <div class="feature">
+            <h3>🏗️ Tech Stack</h3>
+            <div class="tech-stack">
+                <div class="tech">
+                    <h4>FastAPI</h4>
+                    <p>High-performance async API framework</p>
+                </div>
+                <div class="tech">
+                    <h4>httpx</h4>
+                    <p>Modern async HTTP client</p>
+                </div>
+                <div class="tech">
+                    <h4>SQLModel</h4>
+                    <p>Type-safe database operations</p>
+                </div>
+                <div class="tech">
+                    <h4>Pydantic</h4>
+                    <p>Data validation and serialization</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="feature">
+            <h3>🔧 For Developers</h3>
+            <p>Our platform is designed with developers in mind. Every feature is accessible via clean REST APIs with comprehensive documentation, type safety, and production-grade error handling.</p>
+        </div>
+        
+        <div class="feature">
+            <h3>📈 For Businesses</h3>
+            <p>Scale your dropshipping operations with reliable access to eBay's product data. Monitor competitor pricing, discover trending products, and automate your research workflows.</p>
+        </div>
+        
+        <div style="text-align:center;margin-top:40px;">
+            <a class="btn" href="/">← Back to Home</a>
+            <a class="btn" href="/api/docs">API Documentation</a>
+            <a class="btn" href="/privacy">Privacy Policy</a>
+        </div>
     </div>
 </body>
 </html>
@@ -315,27 +624,47 @@ HTML_PRIVACY = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Privacy Policy - Revolist</title>
+    <title>Privacy Policy - eBay Dropshipping Spy</title>
     <style>
-        body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;margin:0;padding:40px;}
-        .card{max-width:700px;margin:0 auto;background:#fff;padding:30px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);}
+        body{font-family:Arial,Helvetica,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);margin:0;padding:40px;}
+        .card{max-width:700px;margin:0 auto;background:#fff;padding:30px;border-radius:15px;box-shadow:0 10px 30px rgba(0,0,0,0.2);}
         h1{text-align:center;color:#333;}
-        .btn{display:inline-block;margin:10px 0;padding:10px 20px;background:#0064d2;color:#fff;text-decoration:none;border-radius:5px;}
+        .btn{display:inline-block;margin:10px 0;padding:10px 20px;background:#667eea;color:#fff;text-decoration:none;border-radius:5px;font-weight:600;}
+        .btn:hover{background:#5a6fd8;}
+        .highlight{background:#e8f4fd;padding:15px;border-radius:8px;margin:15px 0;border-left:4px solid #0066cc;}
     </style>
 </head>
 <body>
     <div class="card">
-        <h1>Privacy Policy</h1>
+        <h1>🔐 Privacy Policy</h1>
         <p>Your privacy is important to us. This policy explains how we collect, use, and protect your information.</p>
-        <h3>Data Collection</h3>
-        <p><strong>Basic Product Search:</strong> No personal data collection. We only use eBay Application Tokens to access public product data.</p>
-        <p><strong>Optional eBay Login:</strong> If you choose to connect your eBay account, we store OAuth tokens necessary to access eBay APIs on your behalf.</p>
-        <h3>Data Usage</h3>
+        
+        <div class="highlight">
+            <h3>🛡️ Data Collection</h3>
+            <p><strong>Basic Product Search:</strong> No personal data collection. We only use eBay Application Tokens to access public product data.</p>
+            <p><strong>Optional eBay Login:</strong> If you choose to connect your eBay account, we store OAuth tokens necessary to access eBay APIs on your behalf.</p>
+        </div>
+        
+        <h3>📊 Data Usage</h3>
         <p>Your data is used solely to provide eBay product search functionality. We never share personal information with third parties.</p>
-        <h3>Data Protection</h3>
+        
+        <h3>🔒 Data Protection</h3>
         <p>All tokens are stored securely using modern encryption. API tokens are automatically refreshed and have limited lifespans.</p>
-        <h3>Transparency</h3>
+        
+        <h3>🌟 Transparency</h3>
         <p>Our application is open-source and you can review exactly how your data is handled.</p>
+        
+        <div class="highlight">
+            <h3>🚀 Production Features</h3>
+            <ul>
+                <li>Automatic token refresh and expiration</li>
+                <li>Secure environment variable management</li>
+                <li>No logging of sensitive information</li>
+                <li>Rate limiting to prevent abuse</li>
+                <li>Comprehensive error handling</li>
+            </ul>
+        </div>
+        
         <a class="btn" href="/">← Back to Home</a>
     </div>
 </body>
@@ -348,7 +677,7 @@ from fastapi.responses import HTMLResponse
 async def home():
     return HTML_HOME
 
-@app.get("/about", response_class=HTMLResponse)
+@app.get("/about", response_class=HTMLResponse) 
 async def about():
     return HTML_ABOUT
 
