@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eBay Product Search</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: #f8f9fa;
+            color: #212529;
+            display: flex;
+            justify-content: center;
+            padding-top: 40px;
+        }
+        .container {
+            width: 90%;
+            max-width: 1000px;
+        }
+        h1 {
+            text-align: center;
+            color: #343a40;
+            margin-bottom: 30px;
+        }
+        .search-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        #searchInput {
+            flex-grow: 1;
+            padding: 15px;
+            font-size: 16px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+        }
+        #searchButton {
+            padding: 15px 25px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #searchButton:hover {
+            background-color: #0056b3;
+        }
+        #results-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+        }
+        .product-item {
+            background-color: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .product-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .product-item img {
+            max-width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+        .product-title {
+            font-weight: 600;
+            font-size: 15px;
+            height: 4.5em; /* Approximately 3 lines */
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .product-price {
+            font-weight: bold;
+            font-size: 18px;
+            color: #28a745;
+        }
+        .status-message {
+            text-align: center;
+            font-size: 18px;
+            color: #6c757d;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>eBay Product Search</h1>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="e.g., 'vintage leather jacket'">
+            <button id="searchButton">Search</button>
+        </div>
+        <div id="results-container"></div>
+    </div>
+
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const resultsContainer = document.getElementById('results-container');
+
+        const performSearch = async () => {
+            const keyword = searchInput.value.trim();
+            if (!keyword) return;
+
+            resultsContainer.innerHTML = `<div class="status-message">Searching...</div>`;
+
+            try {
+                // Note: The new endpoint is a GET request
+                const response = await fetch(`/api/search?keyword=${encodeURIComponent(keyword)}&limit=50`);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail.message || 'The API request failed.');
+                }
+
+                const data = await response.json();
+                displayResults(data.results);
+
+            } catch (error) {
+                resultsContainer.innerHTML = `<div class="status-message" style="color: red;">Error: ${error.message}</div>`;
+            }
+        };
+
+        const displayResults = (items) => {
+            if (!items || items.length === 0) {
+                resultsContainer.innerHTML = `<div class="status-message">No products found for that keyword.</div>`;
+                return;
+            }
+
+            resultsContainer.innerHTML = items.map(item => `
+                <div class="product-item">
+                    <img src="${item.image?.imageUrl || ''}" alt="${item.title}">
+                    <div class="product-title">${item.title}</div>
+                    <div class="product-price">${item.price.value} ${item.price.currency}</div>
+                </div>
+            `).join('');
+        };
+
+        searchButton.addEventListener('click', performSearch);
+        searchInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                performSearch();
+            }
+        });
+    </script>
+</body>
+</html>
