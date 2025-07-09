@@ -722,7 +722,7 @@
 
     <div class="container">
         <div class="search-section">
-            <div class="search-container">
+        <div class="search-container">
                 <input type="text" id="searchInput" placeholder="Enter product keyword (e.g., 'wireless earbuds', 'phone case')">
                 <button id="searchButton">Search Products</button>
             </div>
@@ -958,7 +958,7 @@
                     'Seller info not available';
 
                 return `
-                    <div class="product-item">
+                <div class="product-item">
                         <img src="${image}" alt="${item.title || 'Product'}" class="product-image" onerror="this.src='https://via.placeholder.com/200x200?text=No+Image'">
                         <div class="product-title">${item.title || 'No title available'}</div>
                         <div class="product-price">
@@ -987,7 +987,7 @@
                             ${detailTags.join('')}
                         </div>
                         <div class="seller-info">${sellerInfo}</div>
-                    </div>
+                </div>
                 `;
             }).join('');
         };
@@ -1149,17 +1149,23 @@
                 return;
             }
 
-            showLoadingState('Performing advanced market insights analysis...');
+            showLoadingState('Analyzing market and retrieving sold data...');
 
             try {
-                const response = await fetch(`/api/research/marketplace-insights?keyword=${encodeURIComponent(keyword)}&limit=100`);
-                const data = await response.json();
+                // Get real sold items data
+                const soldItemsResponse = await fetch(`/api/research/sold-items?keyword=${encodeURIComponent(keyword)}&days_back=90`);
+                const soldItemsData = await soldItemsResponse.json();
 
-                if (data.success) {
-                    displayMarketInsights(data);
-                } else {
-                    throw new Error(data.detail || 'Market insights failed');
+                if (!soldItemsData.success) {
+                    throw new Error(soldItemsData.detail || 'Failed to get sold items data');
                 }
+
+                // Get market insights
+                const insightsResponse = await fetch(`/api/research/marketplace-insights?keyword=${encodeURIComponent(keyword)}&limit=100`);
+                const insightsData = await insightsResponse.json();
+
+                // Display combined analysis
+                displayEnhancedMarketInsights(soldItemsData, insightsData);
             } catch (error) {
                 console.error('Market insights error:', error);
                 showError('Failed to get market insights: ' + error.message);
@@ -1168,84 +1174,479 @@
             }
         }
 
-        function displayMarketInsights(data) {
-            const insights = data.insights;
-            const marketIntel = insights.market_intelligence;
+        function displayEnhancedMarketInsights(soldData, insightsData) {
+            const summary = soldData.sold_items_summary;
+            const analysis = soldData.market_analysis;
+            const insights = insightsData?.insights?.market_intelligence || {};
 
             let insightsHtml = `
                 <div class="market-insights">
-                    <h3>🔥 Market Insights: ${data.keyword}</h3>
+                    <h3>🔥 Enhanced Market Analysis: ${soldData.search_metadata.keyword}</h3>
                     
                     <div class="insights-grid">
                         <div class="insight-card">
-                            <h4>📊 Market Size</h4>
-                            <p><strong>Active Listings:</strong> ${marketIntel.market_size.total_listings}</p>
-                            <p><strong>Estimated Monthly Sales:</strong> ${marketIntel.market_size.estimated_monthly_sales}</p>
-                            <p><strong>Market Watchers:</strong> ${marketIntel.market_size.total_market_watchers}</p>
-                            <p><strong>Active Sellers:</strong> ${marketIntel.market_size.active_sellers}</p>
+                            <h4>📊 Sales Performance</h4>
+                            <p><strong>Total Items Sold:</strong> ${summary.total_items_sold}</p>
+                            <p><strong>Total Sales Value:</strong> $${summary.total_sales_value}</p>
+                            <p><strong>Average Sale Price:</strong> $${summary.average_sale_price}</p>
+                            <p><strong>Sales Velocity:</strong> ${summary.sales_velocity} items/day</p>
+                            <p><strong>Est. Monthly Sales:</strong> ${summary.estimated_monthly_sales} items</p>
                         </div>
 
                         <div class="insight-card">
-                            <h4>🎯 Demand Analysis</h4>
-                            <p><strong>Avg Watchers/Item:</strong> ${marketIntel.demand_analysis.average_watchers_per_item.toFixed(1)}</p>
-                            <p><strong>High Demand Items:</strong> ${marketIntel.demand_analysis.high_demand_items}</p>
-                            <div class="demand-distribution">
-                                <small>High: ${marketIntel.demand_analysis.demand_distribution.high_demand} | 
-                                Medium: ${marketIntel.demand_analysis.demand_distribution.medium_demand} | 
-                                Low: ${marketIntel.demand_analysis.demand_distribution.low_demand}</small>
-                            </div>
+                            <h4>📈 Price Trends</h4>
+                            ${displayPriceTrends(analysis.price_trends)}
                         </div>
 
                         <div class="insight-card">
-                            <h4>💰 Pricing Intelligence</h4>
-                            <p><strong>Average Price:</strong> $${marketIntel.pricing_insights.average_price.toFixed(2)}</p>
-                            <p><strong>Price Range:</strong> $${marketIntel.pricing_insights.price_range.min?.toFixed(2) || 0} - $${marketIntel.pricing_insights.price_range.max?.toFixed(2) || 0}</p>
-                            <p><strong>Competition:</strong> ${marketIntel.pricing_insights.price_competition}</p>
+                            <h4>🔮 Price Predictions</h4>
+                            ${displayPricePredictions(analysis.price_predictions)}
                         </div>
 
                         <div class="insight-card">
-                            <h4>🏪 Seller Landscape</h4>
-                            <p><strong>Competition Level:</strong> ${marketIntel.seller_landscape.competition_level}</p>
-                            <p><strong>Seller Dominance:</strong> ${marketIntel.seller_landscape.top_seller_dominance}</p>
-                            <p><strong>New Seller Opportunity:</strong> ${marketIntel.seller_landscape.new_seller_opportunities ? '✅ Yes' : '❌ Limited'}</p>
+                            <h4>📦 Condition Analysis</h4>
+                            ${displayConditionAnalysis(analysis.condition_analysis)}
                         </div>
                     </div>
 
-                    <div class="insight-card">
-                        <h4>🚀 Dropshipping Recommendations</h4>
-                        <p><strong>Market Opportunity:</strong> ${marketIntel.dropshipping_recommendations.market_opportunity}</p>
-                        <p><strong>Strategy:</strong> ${marketIntel.dropshipping_recommendations.recommended_strategy}</p>
-                        
-                        <div class="risk-success-factors">
-                            <div class="risk-factors">
-                                <strong>⚠️ Risk Factors:</strong>
-                                <ul>${marketIntel.dropshipping_recommendations.risk_factors.map(risk => `<li>${risk}</li>`).join('')}</ul>
-                            </div>
-                            <div class="success-factors">
-                                <strong>✅ Success Factors:</strong>
-                                <ul>${marketIntel.dropshipping_recommendations.success_factors.map(factor => `<li>${factor}</li>`).join('')}</ul>
-                            </div>
+                    <div class="insights-grid">
+                        <div class="insight-card">
+                            <h4>👥 Seller Analysis</h4>
+                            ${displaySellerAnalysis(analysis.seller_analysis)}
+                        </div>
+
+                        <div class="insight-card">
+                            <h4>📅 Daily Sales Trends</h4>
+                            ${displayDailySalesTrends(analysis.daily_sales_trends)}
+                        </div>
+
+                        <div class="insight-card">
+                            <h4>🏆 Competition Metrics</h4>
+                            ${displayCompetitionMetrics(analysis.competition_metrics)}
+                        </div>
+
+                        <div class="insight-card">
+                            <h4>💰 Profit Analysis</h4>
+                            ${displayProfitAnalysis(soldData.sold_items)}
+                        </div>
+                    </div>
+
+                    <div class="sold-items-analysis">
+                        <h4>📦 Recently Sold Items</h4>
+                        <div class="filter-controls">
+                            <select id="sortSoldItems" onchange="sortSoldItems(this.value)">
+                                <option value="recent">Most Recent</option>
+                                <option value="price_asc">Price: Low to High</option>
+                                <option value="price_desc">Price: High to Low</option>
+                                <option value="sales_velocity">Sales Velocity</option>
+                            </select>
+                        </div>
+                        <div class="sold-items-grid">
+                            ${displaySoldItems(soldData.sold_items.slice(0, 6))}
                         </div>
                     </div>
 
                     <div class="methodology-note">
-                        <h4>📝 Sold Count Methodology</h4>
-                        <p><strong>Accuracy:</strong> ${insights.sold_count_methodology.accuracy}</p>
-                        <p><strong>Factors:</strong> ${insights.sold_count_methodology.estimation_factors.join(', ')}</p>
-                        <small>${insights.sold_count_methodology.note}</small>
+                        <h4>📝 Analysis Details</h4>
+                        <p><strong>Data Period:</strong> Last ${soldData.search_metadata.days_analyzed} days</p>
+                        <p><strong>Data Points:</strong> ${soldData.sold_items.length} completed sales analyzed</p>
+                        <p><strong>Price Trend Confidence:</strong> ${analysis.price_predictions.confidence_level}</p>
+                        <p><strong>Market Concentration:</strong> ${analysis.competition_metrics.market_concentration}</p>
                     </div>
                 </div>
             `;
 
-            // Display items with sold estimates
-            if (insights.items_with_sold_estimates && insights.items_with_sold_estimates.length > 0) {
-                currentResults = insights.items_with_sold_estimates;
+            // Display items with sold data
+            if (soldData.sold_items && soldData.sold_items.length > 0) {
+                currentResults = soldData.sold_items;
                 updateProductCards(currentResults);
             }
 
             // Add insights to the page
             const resultsContainer = document.getElementById('resultsContainer');
             resultsContainer.insertAdjacentHTML('afterbegin', insightsHtml);
+        }
+
+        function displayPriceTrends(trends) {
+            if (trends.trend === "insufficient_data") {
+                return '<p>Insufficient data for price trend analysis</p>';
+            }
+
+            const distribution = trends.price_distribution;
+            const trendIcon = {
+                "increasing": "📈",
+                "decreasing": "📉",
+                "stable": "➡️"
+            }[trends.trend];
+
+            return `
+                <div class="price-trends">
+                    <div class="trend-indicator trend-${trends.trend}">
+                        ${trendIcon} ${trends.trend.toUpperCase()}
+                    </div>
+                    <div class="price-distribution">
+                        <p><strong>Recent Average:</strong> $${distribution.recent_average}</p>
+                        <p><strong>Overall Average:</strong> $${distribution.overall_average}</p>
+                        <p><strong>Price Range:</strong> $${distribution.minimum} - $${distribution.maximum}</p>
+                        <p><strong>Volatility:</strong> ${trends.volatility.toUpperCase()}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayPricePredictions(predictions) {
+            if (predictions.prediction === "insufficient_data") {
+                return '<p>Insufficient data for price predictions</p>';
+            }
+
+            const changes = predictions.predicted_changes;
+            const momentum = predictions.price_momentum;
+            const momentumClass = momentum > 0 ? "positive" : momentum < 0 ? "negative" : "neutral";
+
+            return `
+                <div class="price-predictions">
+                    <div class="momentum ${momentumClass}">
+                        Price Momentum: ${momentum > 0 ? "+" : ""}${momentum}
+                    </div>
+                    <div class="predictions">
+                        <p><strong>7-Day Change:</strong> ${changes["7_days"] > 0 ? "+" : ""}$${changes["7_days"]}</p>
+                        <p><strong>30-Day Change:</strong> ${changes["30_days"] > 0 ? "+" : ""}$${changes["30_days"]}</p>
+                        <p><strong>Sales Trend:</strong> ${predictions.sales_trend.toUpperCase()}</p>
+                        <p><strong>Confidence:</strong> ${predictions.confidence_level.toUpperCase()}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayConditionAnalysis(analysis) {
+            if (analysis.analysis === "no_data") {
+                return '<p>No condition data available</p>';
+            }
+
+            return `
+                <div class="condition-analysis">
+                    ${Object.entries(analysis).map(([condition, data]) => `
+                        <div class="condition-item">
+                            <strong>${condition}:</strong>
+                            <ul>
+                                <li>Count: ${data.count} (${data.percentage}%)</li>
+                                <li>Avg Price: $${data.average_price}</li>
+                                <li>Total Value: $${data.total_value}</li>
+                            </ul>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function displaySellerAnalysis(analysis) {
+            if (analysis.analysis === "no_data") {
+                return '<p>No seller data available</p>';
+            }
+
+            return `
+                <div class="seller-analysis">
+                    <div class="seller-metrics">
+                        <p><strong>Total Sellers:</strong> ${analysis.total_sellers}</p>
+                        <p><strong>Avg Sales/Seller:</strong> ${analysis.average_sales_per_seller}</p>
+                        <p><strong>Avg Value/Seller:</strong> $${analysis.average_value_per_seller}</p>
+                    </div>
+                    <div class="top-sellers">
+                        <h5>Top Sellers:</h5>
+                        ${analysis.top_sellers.map(seller => `
+                            <div class="top-seller-item">
+                                <span class="seller-name">${seller.username}</span>
+                                <span class="seller-stats">
+                                    ${seller.sales_count} sales • $${seller.total_value}
+                                    ${seller.top_rated ? '⭐' : ''}
+                                </span>
+                                <div class="market-share-bar" style="width: ${seller.market_share}%"></div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayDailySalesTrends(trends) {
+            if (trends.analysis === "no_data") {
+                return '<p>No daily sales data available</p>';
+            }
+
+            const stats = trends.daily_stats;
+            const analysis = trends.trend_analysis;
+
+            return `
+                <div class="daily-trends">
+                    <div class="daily-averages">
+                        <p><strong>Avg Daily Sales:</strong> ${stats.average_daily_sales}</p>
+                        <p><strong>Avg Daily Value:</strong> $${stats.average_daily_value}</p>
+                    </div>
+                    <div class="peak-days">
+                        <p><strong>Best Volume:</strong> ${stats.highest_volume_day.count} items on ${formatDate(stats.highest_volume_day.date)}</p>
+                        <p><strong>Best Value:</strong> $${stats.highest_value_day.value} on ${formatDate(stats.highest_value_day.date)}</p>
+                    </div>
+                    <div class="trend-indicators">
+                        <p><strong>Volume Trend:</strong> ${analysis.volume_trend.toUpperCase()}</p>
+                        <p><strong>Value Trend:</strong> ${analysis.value_trend.toUpperCase()}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayCompetitionMetrics(metrics) {
+            const concentrationLabels = {
+                "competitive": "👥 Competitive Market",
+                "moderately_concentrated": "🤝 Moderately Concentrated",
+                "highly_concentrated": "👑 Highly Concentrated",
+                "unknown": "❓ Unknown"
+            };
+
+            return `
+                <div class="competition-metrics">
+                    <p><strong>Total Sellers:</strong> ${metrics.total_sellers}</p>
+                    <p><strong>Top Rated Sellers:</strong> ${metrics.top_rated_sellers}</p>
+                    <div class="market-concentration ${metrics.market_concentration}">
+                        ${concentrationLabels[metrics.market_concentration]}
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayProfitAnalysis(items) {
+            if (!items || items.length === 0) {
+                return '<p>No profit analysis data available</p>';
+            }
+
+            // Calculate average margins
+            const margins = items.reduce((acc, item) => {
+                const profit = item.sold_data.profit_potential || {};
+                acc.low += profit.low_margin || 0;
+                acc.medium += profit.medium_margin || 0;
+                acc.high += profit.high_margin || 0;
+                return acc;
+            }, { low: 0, medium: 0, high: 0 });
+
+            const avgMargins = {
+                low: (margins.low / items.length).toFixed(2),
+                medium: (margins.medium / items.length).toFixed(2),
+                high: (margins.high / items.length).toFixed(2)
+            };
+
+            return `
+                <div class="profit-analysis">
+                    <div class="margin-levels">
+                        <div class="margin-level low">
+                            <span>Conservative (10%)</span>
+                            <strong>$${avgMargins.low}</strong>
+                        </div>
+                        <div class="margin-level medium">
+                            <span>Moderate (20%)</span>
+                            <strong>$${avgMargins.medium}</strong>
+                        </div>
+                        <div class="margin-level high">
+                            <span>Aggressive (30%)</span>
+                            <strong>$${avgMargins.high}</strong>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Add new styles for enhanced metrics
+        const enhancedStyles = document.createElement('style');
+        enhancedStyles.textContent = `
+            .price-trends, .price-predictions, .condition-analysis,
+            .seller-analysis, .daily-trends, .competition-metrics,
+            .profit-analysis {
+                padding: 10px;
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.05);
+            }
+
+            .trend-indicator {
+                display: inline-block;
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-weight: 600;
+                margin-bottom: 10px;
+            }
+
+            .trend-increasing {
+                background: rgba(0, 184, 148, 0.1);
+                color: #00b894;
+            }
+
+            .trend-decreasing {
+                background: rgba(255, 107, 107, 0.1);
+                color: #d63031;
+            }
+
+            .trend-stable {
+                background: rgba(116, 185, 255, 0.1);
+                color: #0984e3;
+            }
+
+            .momentum {
+                font-weight: 600;
+                padding: 4px 8px;
+                border-radius: 12px;
+                margin-bottom: 10px;
+            }
+
+            .momentum.positive {
+                background: rgba(0, 184, 148, 0.1);
+                color: #00b894;
+            }
+
+            .momentum.negative {
+                background: rgba(255, 107, 107, 0.1);
+                color: #d63031;
+            }
+
+            .momentum.neutral {
+                background: rgba(116, 185, 255, 0.1);
+                color: #0984e3;
+            }
+
+            .condition-item {
+                margin-bottom: 10px;
+                padding: 8px;
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.05);
+            }
+
+            .condition-item ul {
+                list-style: none;
+                margin: 5px 0 0 10px;
+                padding: 0;
+            }
+
+            .top-seller-item {
+                position: relative;
+                padding: 8px;
+                margin-bottom: 5px;
+                border-radius: 6px;
+                background: rgba(255, 255, 255, 0.05);
+            }
+
+            .market-share-bar {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                height: 3px;
+                background: linear-gradient(90deg, #667eea, #764ba2);
+                border-radius: 0 0 6px 6px;
+            }
+
+            .margin-levels {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+
+            .margin-level {
+                text-align: center;
+                padding: 10px;
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.05);
+            }
+
+            .margin-level span {
+                display: block;
+                font-size: 0.8em;
+                margin-bottom: 5px;
+            }
+
+            .margin-level strong {
+                font-size: 1.2em;
+            }
+
+            .filter-controls {
+                margin-bottom: 15px;
+            }
+
+            .filter-controls select {
+                padding: 8px 12px;
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                background: rgba(255, 255, 255, 0.1);
+                color: inherit;
+                font-size: 0.9em;
+            }
+
+            .market-concentration {
+                display: inline-block;
+                padding: 6px 12px;
+                border-radius: 12px;
+                font-weight: 600;
+                margin-top: 10px;
+            }
+
+            .market-concentration.competitive {
+                background: rgba(0, 184, 148, 0.1);
+                color: #00b894;
+            }
+
+            .market-concentration.moderately_concentrated {
+                background: rgba(116, 185, 255, 0.1);
+                color: #0984e3;
+            }
+
+            .market-concentration.highly_concentrated {
+                background: rgba(255, 107, 107, 0.1);
+                color: #d63031;
+            }
+        `;
+        document.head.appendChild(enhancedStyles);
+
+        // Add sorting functionality
+        function sortSoldItems(sortBy) {
+            const params = new URLSearchParams(window.location.search);
+            params.set('sort_by', sortBy);
+            
+            // Reload with new sorting
+            performSearch();
+        }
+
+        function displaySoldItems(items) {
+            return items.map(item => `
+                <div class="sold-item-card">
+                    <img src="${item.image}" alt="${item.title}" class="sold-item-image">
+                    <div class="sold-item-details">
+                        <div class="sold-item-title">${truncateText(item.title, 50)}</div>
+                        <div class="sold-item-price">Sold for: $${item.sold_data.sold_price}</div>
+                        <div class="sold-item-date">Sold: ${formatDate(item.sold_data.sold_date)}</div>
+                        ${item.sold_data.sales_velocity ? 
+                            `<div class="sold-item-velocity">Sold in ${item.sold_data.sales_velocity.days_to_sell} days</div>` 
+                            : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function calculateOptimalPrice(avgPrice, priceRange) {
+            if (!priceRange || !priceRange.min || !priceRange.max) {
+                return avgPrice;
+            }
+            // Calculate optimal price point (60% between min and max)
+            const range = priceRange.max - priceRange.min;
+            return (Number(priceRange.min) + (range * 0.6)).toFixed(2);
+        }
+
+        function truncateText(text, maxLength) {
+            if (!text) return '';
+            return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Recently';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                year: 'numeric'
+            });
         }
 
         async function showSellerAnalytics() {

@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import Dict, Any, Optional, List
 from enum import Enum
 
@@ -1151,6 +1151,490 @@ async def call_marketplace_insights_api(keyword: str, category_id: Optional[str]
         # Fallback to simulation if API not available
         logger.warning(f"Marketplace Insights API not available: {e}")
         return await enhanced_market_insights_simulation(keyword, category_id, limit)
+
+@router.get("/research/sold-items")
+async def get_sold_items(
+    keyword: str = Query(..., description="Product keyword to search"),
+    category_id: Optional[str] = Query(None, description="Category ID to filter by"),
+    days_back: int = Query(90, le=90, ge=1, description="Number of days to look back (max 90)"),
+    min_price: Optional[float] = Query(None, description="Minimum price filter"),
+    max_price: Optional[float] = Query(None, description="Maximum price filter"),
+    condition: Optional[str] = Query(None, description="Item condition filter"),
+    sort_by: Optional[str] = Query("recent", description="Sort by: recent, price_asc, price_desc, sales_velocity")
+) -> Dict[str, Any]:
+    """
+    Get REAL sold items data with enhanced metrics and price predictions.
+    """
+    try:
+        # 1. Get completed items using Browse API with special filters
+        filter_params = ["soldItems"]  # Base filter for sold items
+        
+        if min_price and max_price:
+            filter_params.append(f"price:[{min_price}..{max_price}]")
+        elif min_price:
+            filter_params.append(f"price:[{min_price}..]")
+        elif max_price:
+            filter_params.append(f"price:[..{max_price}]")
+            
+        if condition:
+            filter_params.append(f"conditions:{{{condition}}}")
+
+        completed_items_params = {
+            "q": keyword,
+            "filter": ",".join(filter_params),
+            "category_ids": category_id if category_id else "",
+            "limit": 200  # Maximum allowed
+        }
+        
+        completed_results = await ebay_client.call_api(
+            method='GET',
+            endpoint='/buy/browse/v1/item_summary/search',
+            params=completed_items_params,
+            headers={
+                "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+                "X-EBAY-C-ENDUSERCTX": "contextualLocation=country=US,zip=90210"
+            }
+        )
+
+        # 2. Get sales history using Marketplace Insights API
+        sales_history_params = {
+            "q": keyword,
+            "category_ids": category_id if category_id else "",
+            "filter": f"soldWithin:{days_back}d",
+            "sort": "newlyListed",
+            "limit": 100
+        }
+
+        try:
+            sales_history = await ebay_client.call_api(
+                method='GET',
+                endpoint='/buy/marketplace-insights/v1_beta/item_sales/search',
+                params=sales_history_params
+            )
+        except EbayAPIError as e:
+            sales_history = {"itemSummaries": []}
+
+        # 3. Process and combine the data
+        items = completed_results.get("itemSummaries", [])
+        sold_items = []
+        
+        # Track price trends
+        price_history = []
+        daily_sales = {}
+        condition_stats = {}
+        seller_performance = {}
+        
+        for item in items:
+            # Extract base item data
+            processed_item = {
+                "itemId": item.get("itemId"),
+                "title": item.get("title"),
+                "price": item.get("price"),
+                "image": item.get("image", {}).get("imageUrl"),
+                "item_url": item.get("itemWebUrl"),
+                "condition": item.get("condition"),
+                
+                # Seller info with enhanced metrics
+                "seller": {
+                    "username": item.get("seller", {}).get("username"),
+                    "feedback_score": item.get("seller", {}).get("feedbackScore"),
+                    "feedback_percentage": item.get("seller", {}).get("feedbackPercentage"),
+                    "top_rated": item.get("seller", {}).get("topRatedSeller", False),
+                    "business_type": item.get("seller", {}).get("sellerAccountType", "Individual")
+                },
+
+                # Enhanced sold data
+                "sold_data": {
+                    "sold_price": item.get("price", {}).get("value"),
+                    "sold_date": item.get("itemEndDate"),
+                    "buyer_count": item.get("uniqueBuyerCount", 0),
+                    "watch_count": item.get("watchCount", 0),
+                    "bid_count": item.get("bidCount", 0),
+                    "shipping_cost": extract_shipping_cost(item),
+                    "total_cost": calculate_total_cost(item),
+                    "profit_potential": calculate_profit_potential(item)
+                }
+            }
+
+            # Track price history
+            if processed_item["sold_data"]["sold_price"]:
+                price_history.append(float(processed_item["sold_data"]["sold_price"]))
+
+            # Track daily sales
+            if processed_item["sold_data"]["sold_date"]:
+                sale_date = processed_item["sold_data"]["sold_date"][:10]  # YYYY-MM-DD
+                if sale_date not in daily_sales:
+                    daily_sales[sale_date] = {"count": 0, "value": 0}
+                daily_sales[sale_date]["count"] += 1
+                daily_sales[sale_date]["value"] += float(processed_item["sold_data"]["sold_price"] or 0)
+
+            # Track condition stats
+            condition = processed_item["condition"]
+            if condition:
+                if condition not in condition_stats:
+                    condition_stats[condition] = {"count": 0, "total_value": 0}
+                condition_stats[condition]["count"] += 1
+                condition_stats[condition]["total_value"] += float(processed_item["sold_data"]["sold_price"] or 0)
+
+            # Track seller performance
+            seller = processed_item["seller"]["username"]
+            if seller:
+                if seller not in seller_performance:
+                    seller_performance[seller] = {
+                        "sales_count": 0,
+                        "total_value": 0,
+                        "feedback_score": processed_item["seller"]["feedback_score"],
+                        "top_rated": processed_item["seller"]["top_rated"]
+                    }
+                seller_performance[seller]["sales_count"] += 1
+                seller_performance[seller]["total_value"] += float(processed_item["sold_data"]["sold_price"] or 0)
+
+            # Add sales velocity metrics
+            if item.get("itemEndDate"):
+                from datetime import datetime, timezone
+                end_date = datetime.fromisoformat(item["itemEndDate"].replace('Z', '+00:00'))
+                now = datetime.now(timezone.utc)
+                days_ago = (now - end_date).days
+
+                if days_ago > 0:
+                    processed_item["sold_data"]["sales_velocity"] = {
+                        "days_to_sell": days_ago,
+                        "sales_per_day": round(1 / days_ago, 2) if days_ago > 0 else 0
+                    }
+
+            # Add market insights if available
+            if "marketPriceInsights" in item:
+                insights = item["marketPriceInsights"]
+                processed_item["market_insights"] = {
+                    "average_price": insights.get("averagePrice"),
+                    "price_range": {
+                        "min": insights.get("minPrice"),
+                        "max": insights.get("maxPrice")
+                    },
+                    "similar_items_sold": insights.get("similarItemsSold", 0),
+                    "trending_price": insights.get("trendingPrice")
+                }
+
+            sold_items.append(processed_item)
+
+        # 4. Calculate enhanced metrics and predictions
+        total_sold = len(sold_items)
+        total_value = sum(float(item["sold_data"]["sold_price"]) for item in sold_items if item["sold_data"]["sold_price"])
+        avg_price = round(total_value / total_sold, 2) if total_sold > 0 else 0
+        
+        # Calculate price trends and predictions
+        price_trends = calculate_price_trends(price_history)
+        price_predictions = predict_future_prices(price_history, daily_sales)
+        
+        # Calculate sales velocity metrics
+        items_with_velocity = [item for item in sold_items if "sales_velocity" in item.get("sold_data", {})]
+        avg_days_to_sell = sum(item["sold_data"]["sales_velocity"]["days_to_sell"] for item in items_with_velocity) / len(items_with_velocity) if items_with_velocity else 0
+        
+        # Sort items based on preference
+        if sort_by == "price_asc":
+            sold_items.sort(key=lambda x: float(x["sold_data"]["sold_price"] or 0))
+        elif sort_by == "price_desc":
+            sold_items.sort(key=lambda x: float(x["sold_data"]["sold_price"] or 0), reverse=True)
+        elif sort_by == "sales_velocity":
+            sold_items.sort(key=lambda x: x.get("sold_data", {}).get("sales_velocity", {}).get("days_to_sell", float('inf')))
+        
+        return {
+            "success": True,
+            "search_metadata": {
+                "keyword": keyword,
+                "category_id": category_id,
+                "days_analyzed": days_back,
+                "filters_applied": {
+                    "min_price": min_price,
+                    "max_price": max_price,
+                    "condition": condition
+                }
+            },
+            "sold_items_summary": {
+                "total_items_sold": total_sold,
+                "total_sales_value": round(total_value, 2),
+                "average_sale_price": avg_price,
+                "average_days_to_sell": round(avg_days_to_sell, 1),
+                "sales_velocity": round(total_sold / days_back, 2) if days_back > 0 else 0,
+                "estimated_monthly_sales": round((total_sold / days_back) * 30, 1) if days_back > 0 else 0
+            },
+            "market_analysis": {
+                "price_trends": price_trends,
+                "price_predictions": price_predictions,
+                "condition_analysis": analyze_condition_stats(condition_stats),
+                "seller_analysis": analyze_seller_performance(seller_performance),
+                "daily_sales_trends": analyze_daily_sales(daily_sales),
+                "competition_metrics": {
+                    "total_sellers": len(seller_performance),
+                    "top_rated_sellers": sum(1 for s in seller_performance.values() if s["top_rated"]),
+                    "market_concentration": calculate_market_concentration(seller_performance)
+                }
+            },
+            "sold_items": sold_items,
+            "api_info": {
+                "browse_api": "Used for completed items data",
+                "marketplace_insights": "Used for sales history (if available)",
+                "note": "Enhanced metrics and predictions based on real sales data"
+            }
+        }
+
+    except EbayAPIError as e:
+        logger.error(f"eBay API error in get_sold_items: {str(e)}")
+        raise HTTPException(
+            status_code=e.status_code or 500,
+            detail={"error": "eBay API Error", "message": str(e)}
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error in get_sold_items: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An unexpected error occurred: {str(e)}")
+
+def extract_shipping_cost(item: Dict[str, Any]) -> float:
+    """Extract shipping cost from item data."""
+    shipping_options = item.get("shippingOptions", [])
+    if not shipping_options:
+        return 0.0
+    
+    # Get the cheapest shipping option
+    min_shipping = min(
+        (float(option.get("shippingCost", {}).get("value", 0) or 0) 
+         for option in shipping_options),
+        default=0
+    )
+    return min_shipping
+
+def calculate_total_cost(item: Dict[str, Any]) -> float:
+    """Calculate total cost including shipping."""
+    price = float(item.get("price", {}).get("value", 0) or 0)
+    shipping = extract_shipping_cost(item)
+    return price + shipping
+
+def calculate_profit_potential(item: Dict[str, Any]) -> Dict[str, Any]:
+    """Calculate potential profit metrics."""
+    price = float(item.get("price", {}).get("value", 0) or 0)
+    shipping = extract_shipping_cost(item)
+    total_cost = price + shipping
+    
+    # Estimated profit margins
+    return {
+        "low_margin": round(total_cost * 0.1, 2),  # 10% margin
+        "medium_margin": round(total_cost * 0.2, 2),  # 20% margin
+        "high_margin": round(total_cost * 0.3, 2),  # 30% margin
+        "suggested_price_points": {
+            "minimum": round(total_cost * 1.1, 2),  # 10% markup
+            "optimal": round(total_cost * 1.2, 2),  # 20% markup
+            "premium": round(total_cost * 1.3, 2)   # 30% markup
+        }
+    }
+
+def calculate_price_trends(price_history: List[float]) -> Dict[str, Any]:
+    """Calculate price trends from historical data."""
+    if not price_history:
+        return {"trend": "insufficient_data"}
+    
+    sorted_prices = sorted(price_history)
+    q1 = sorted_prices[len(sorted_prices)//4]
+    q3 = sorted_prices[3*len(sorted_prices)//4]
+    median = sorted_prices[len(sorted_prices)//2]
+    
+    recent_prices = sorted_prices[-10:]  # Last 10 sales
+    recent_avg = sum(recent_prices) / len(recent_prices)
+    overall_avg = sum(price_history) / len(price_history)
+    
+    trend = "stable"
+    if recent_avg > overall_avg * 1.1:
+        trend = "increasing"
+    elif recent_avg < overall_avg * 0.9:
+        trend = "decreasing"
+    
+    return {
+        "trend": trend,
+        "price_distribution": {
+            "minimum": min(price_history),
+            "maximum": max(price_history),
+            "median": median,
+            "q1": q1,
+            "q3": q3,
+            "recent_average": round(recent_avg, 2),
+            "overall_average": round(overall_avg, 2)
+        },
+        "volatility": calculate_price_volatility(price_history)
+    }
+
+def predict_future_prices(price_history: List[float], daily_sales: Dict[str, Any]) -> Dict[str, Any]:
+    """Predict future price trends."""
+    if not price_history or len(price_history) < 5:
+        return {"prediction": "insufficient_data"}
+    
+    recent_prices = price_history[-10:]
+    price_momentum = sum(y - x for x, y in zip(recent_prices[:-1], recent_prices[1:])) / len(recent_prices[:-1])
+    
+    # Calculate daily sales trend
+    dates = sorted(daily_sales.keys())
+    if len(dates) >= 2:
+        recent_daily_avg = sum(daily_sales[d]["count"] for d in dates[-5:]) / min(5, len(dates))
+        older_daily_avg = sum(daily_sales[d]["count"] for d in dates[:-5]) / max(1, len(dates)-5)
+        sales_trend = "increasing" if recent_daily_avg > older_daily_avg else "decreasing" if recent_daily_avg < older_daily_avg else "stable"
+    else:
+        sales_trend = "insufficient_data"
+    
+    prediction = {
+        "price_momentum": round(price_momentum, 2),
+        "sales_trend": sales_trend,
+        "predicted_changes": {
+            "7_days": round(price_momentum * 7, 2),
+            "30_days": round(price_momentum * 30, 2)
+        },
+        "confidence_level": calculate_prediction_confidence(price_history, daily_sales)
+    }
+    
+    return prediction
+
+def calculate_price_volatility(prices: List[float]) -> str:
+    """Calculate price volatility level."""
+    if len(prices) < 2:
+        return "unknown"
+    
+    avg_price = sum(prices) / len(prices)
+    variance = sum((p - avg_price) ** 2 for p in prices) / len(prices)
+    std_dev = variance ** 0.5
+    cv = (std_dev / avg_price) * 100  # Coefficient of variation
+    
+    if cv < 10:
+        return "low"
+    elif cv < 25:
+        return "medium"
+    else:
+        return "high"
+
+def calculate_prediction_confidence(prices: List[float], daily_sales: Dict[str, Any]) -> str:
+    """Calculate confidence level in predictions."""
+    if len(prices) < 10 or len(daily_sales) < 7:
+        return "low"
+    
+    # More data points = higher confidence
+    if len(prices) > 50 and len(daily_sales) > 30:
+        return "high"
+    elif len(prices) > 20 and len(daily_sales) > 14:
+        return "medium"
+    else:
+        return "low"
+
+def analyze_condition_stats(stats: Dict[str, Any]) -> Dict[str, Any]:
+    """Analyze item condition distribution and pricing."""
+    total_items = sum(s["count"] for s in stats.values())
+    if not total_items:
+        return {"analysis": "no_data"}
+    
+    condition_analysis = {}
+    for condition, data in stats.items():
+        avg_price = data["total_value"] / data["count"]
+        condition_analysis[condition] = {
+            "count": data["count"],
+            "percentage": round((data["count"] / total_items) * 100, 1),
+            "average_price": round(avg_price, 2),
+            "total_value": round(data["total_value"], 2)
+        }
+    
+    return condition_analysis
+
+def analyze_seller_performance(sellers: Dict[str, Any]) -> Dict[str, Any]:
+    """Analyze seller performance metrics."""
+    if not sellers:
+        return {"analysis": "no_data"}
+    
+    total_sales = sum(s["sales_count"] for s in sellers.values())
+    total_value = sum(s["total_value"] for s in sellers.values())
+    
+    # Sort sellers by sales value
+    top_sellers = sorted(
+        sellers.items(),
+        key=lambda x: x[1]["total_value"],
+        reverse=True
+    )[:5]
+    
+    return {
+        "total_sellers": len(sellers),
+        "average_sales_per_seller": round(total_sales / len(sellers), 1),
+        "average_value_per_seller": round(total_value / len(sellers), 2),
+        "top_sellers": [
+            {
+                "username": seller,
+                "sales_count": data["sales_count"],
+                "total_value": round(data["total_value"], 2),
+                "market_share": round((data["total_value"] / total_value) * 100, 1),
+                "top_rated": data["top_rated"]
+            }
+            for seller, data in top_sellers
+        ]
+    }
+
+def analyze_daily_sales(sales: Dict[str, Any]) -> Dict[str, Any]:
+    """Analyze daily sales patterns."""
+    if not sales:
+        return {"analysis": "no_data"}
+    
+    dates = sorted(sales.keys())
+    daily_volumes = [sales[d]["count"] for d in dates]
+    daily_values = [sales[d]["value"] for d in dates]
+    
+    return {
+        "daily_stats": {
+            "average_daily_sales": round(sum(daily_volumes) / len(dates), 1),
+            "average_daily_value": round(sum(daily_values) / len(dates), 2),
+            "highest_volume_day": {
+                "date": max(dates, key=lambda d: sales[d]["count"]),
+                "count": max(daily_volumes)
+            },
+            "highest_value_day": {
+                "date": max(dates, key=lambda d: sales[d]["value"]),
+                "value": round(max(daily_values), 2)
+            }
+        },
+        "trend_analysis": analyze_sales_trend(daily_volumes, daily_values)
+    }
+
+def analyze_sales_trend(volumes: List[int], values: List[float]) -> Dict[str, Any]:
+    """Analyze sales trend patterns."""
+    if len(volumes) < 2:
+        return {"trend": "insufficient_data"}
+    
+    volume_trend = "stable"
+    if volumes[-1] > sum(volumes[:-1]) / (len(volumes) - 1):
+        volume_trend = "increasing"
+    elif volumes[-1] < sum(volumes[:-1]) / (len(volumes) - 1):
+        volume_trend = "decreasing"
+    
+    value_trend = "stable"
+    if values[-1] > sum(values[:-1]) / (len(values) - 1):
+        value_trend = "increasing"
+    elif values[-1] < sum(values[:-1]) / (len(values) - 1):
+        value_trend = "decreasing"
+    
+    return {
+        "volume_trend": volume_trend,
+        "value_trend": value_trend
+    }
+
+def calculate_market_concentration(sellers: Dict[str, Any]) -> str:
+    """Calculate market concentration level."""
+    if not sellers:
+        return "unknown"
+    
+    total_sales = sum(s["total_value"] for s in sellers.values())
+    if total_sales == 0:
+        return "unknown"
+    
+    # Calculate Herfindahl-Hirschman Index (HHI)
+    hhi = sum((s["total_value"] / total_sales) ** 2 for s in sellers.values()) * 10000
+    
+    if hhi < 1500:
+        return "competitive"
+    elif hhi < 2500:
+        return "moderately_concentrated"
+    else:
+        return "highly_concentrated"
 
 @router.get("/research/seller-analytics")
 async def seller_analytics_research(
