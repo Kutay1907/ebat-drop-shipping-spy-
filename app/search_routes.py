@@ -15,7 +15,7 @@ except ImportError:
 
 # Import the API client
 try:
-    from app.ebay_client import ebay_client, EbayAPIError
+    from app.ebay_api_client import ebay_client, EbayAPIError
 except ImportError:
     from ebay_client import ebay_client, EbayAPIError
 
