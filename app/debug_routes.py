@@ -5,7 +5,7 @@ Debug routes for troubleshooting eBay authentication issues
 import os
 import logging
 from fastapi import APIRouter, HTTPException
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from app.ebay_api_client import ebay_client, EbayAPIError
 
