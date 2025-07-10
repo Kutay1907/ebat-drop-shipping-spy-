@@ -73,9 +73,8 @@ async def search_products(
     free_shipping_only: bool = Query(False, description="Show only items with free shipping"),
     marketplace: str = Query("EBAY_US", description="eBay marketplace"),
     top_rated_sellers_only: bool = Query(False, description="Show only top-rated sellers"),
-    # Location filters
+    min_seller_feedback: Optional[int] = Query(None, ge=0, description="Minimum seller feedback score"),
     item_location_country: Optional[str] = Query(None, description="Item location country (e.g., US, GB, DE)"),
-    # Enhanced search modes
     search_mode: str = Query("enhanced", description="Search mode - 'enhanced', 'exact', 'broad'")
 ) -> Dict[str, Any]:
     """
@@ -191,10 +190,17 @@ async def search_products(
                 if not has_free_shipping:
                     continue
             
-            # Check top rated seller
-            if top_rated_sellers_only:
-                seller = item.get("seller", {})
-                if not seller.get("topRatedSeller", False):
+            # Check top rated seller and feedback score
+            seller = item.get("seller", {})
+            if top_rated_sellers_only and not seller.get("topRatedSeller", False):
+                continue
+            
+            if min_seller_feedback is not None:
+                seller_feedback = seller.get("feedbackScore", 0)
+                try:
+                    if int(seller_feedback) < min_seller_feedback:
+                        continue
+                except (ValueError, TypeError):
                     continue
             
             filtered_items.append(item)
@@ -211,7 +217,9 @@ async def search_products(
                 "free_shipping_only": free_shipping_only,
                 "buy_it_now_only": buy_it_now_only,
                 "top_rated_sellers_only": top_rated_sellers_only,
-                "item_location_country": item_location_country
+                "min_seller_feedback": min_seller_feedback,
+                "item_location_country": item_location_country,
+                "results_limit": limit
             },
             "sort_order": sort.value,
             "results_count": len(filtered_items),

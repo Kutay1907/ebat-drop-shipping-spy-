@@ -676,10 +676,30 @@
                         <label for="sortOrder">Sort By</label>
                         <select id="sortOrder" class="filter-select">
                             <option value="bestMatch">Best Match</option>
+                            <option value="newlyListed">Newest Listed</option>
                             <option value="price">Price: Low to High</option>
                             <option value="-price">Price: High to Low</option>
-                            <option value="newlyListed">Newly Listed</option>
-                            <option value="endingSoonest">Ending Soonest</option>
+                            <option value="endingSoonest">Ending Soon</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="resultsLimit">Results Per Search</label>
+                        <select id="resultsLimit" class="filter-select">
+                            <option value="20">20 Results</option>
+                            <option value="50" selected>50 Results</option>
+                            <option value="100">100 Results</option>
+                            <option value="200">200 Results</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="minSellerFeedback">Min. Seller Feedback</label>
+                        <select id="minSellerFeedback" class="filter-select">
+                            <option value="">Any Feedback</option>
+                            <option value="100">100+ Feedback</option>
+                            <option value="500">500+ Feedback</option>
+                            <option value="1000">1,000+ Feedback</option>
+                            <option value="5000">5,000+ Feedback</option>
+                            <option value="10000">10,000+ Feedback</option>
                         </select>
                     </div>
                     <div class="filter-group">
@@ -831,7 +851,10 @@
         function buildSearchParams(query) {
             const params = new URLSearchParams();
             params.append('keyword', query);
-            params.append('limit', '50');
+            
+            // Get results limit
+            const limit = document.getElementById('resultsLimit').value;
+            params.append('limit', limit);
 
             // Add filters
             const minPrice = parseFloat(document.getElementById('minPrice').value);
@@ -842,6 +865,7 @@
             const freeShipping = document.getElementById('freeShipping').checked;
             const buyItNow = document.getElementById('buyItNow').checked;
             const topRated = document.getElementById('topRated').checked;
+            const minSellerFeedback = document.getElementById('minSellerFeedback').value;
 
             // Only add price filters if they are valid numbers
             if (!isNaN(minPrice) && minPrice > 0) params.append('min_price', minPrice);
@@ -853,6 +877,7 @@
             if (freeShipping) params.append('free_shipping_only', 'true');
             if (buyItNow) params.append('buy_it_now_only', 'true');
             if (topRated) params.append('top_rated_sellers_only', 'true');
+            if (minSellerFeedback) params.append('min_seller_feedback', minSellerFeedback);
 
             return params.toString();
         }
