@@ -710,6 +710,185 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* 🔥 NEW: Enhanced Filter Styles */
+        .filters-subtitle {
+            font-weight: 600;
+            margin: 20px 0 10px 0;
+            color: #495057;
+            font-size: 1rem;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 5px;
+        }
+
+        .checkbox-filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-filters .checkbox-group {
+            margin-top: 5px;
+            padding: 8px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+
+        .checkbox-filters .checkbox-group:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .checkbox-filters .checkbox-group input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #667eea;
+        }
+
+        .checkbox-filters .checkbox-group label {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+
+        .checkbox-filters .checkbox-group small {
+            font-size: 11px;
+            margin-left: 24px;
+            font-style: italic;
+        }
+
+        /* 🔥 NEW: Search Tips Styles */
+        .search-tips {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid #dee2e6;
+        }
+
+        .search-tips h4 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .tip-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border-left: 4px solid #667eea;
+        }
+
+        .tip-card strong {
+            color: #2c3e50;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .tip-card p {
+            color: #6c757d;
+            margin-bottom: 8px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .tip-card em {
+            color: #667eea;
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        /* Enhanced Product Card Styles for New Data */
+        .sold-count-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin: 2px;
+        }
+
+        .sold-count-badge.estimated {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+        }
+
+        .sold-count-badge.high-demand {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .dropshipping-insight {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 8px;
+            padding: 8px;
+            margin: 5px 0;
+            font-size: 12px;
+        }
+
+        .dropshipping-insight.excellent {
+            background: rgba(40, 167, 69, 0.1);
+            border-color: rgba(40, 167, 69, 0.3);
+            color: #155724;
+        }
+
+        .dropshipping-insight.good {
+            background: rgba(255, 193, 7, 0.1);
+            border-color: rgba(255, 193, 7, 0.3);
+            color: #856404;
+        }
+
+        .dropshipping-insight.avoid {
+            background: rgba(220, 53, 69, 0.1);
+            border-color: rgba(220, 53, 69, 0.3);
+            color: #721c24;
+        }
+
+        .watch-count-badge {
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+            color: white;
+            padding: 3px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .authenticity-badge {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            padding: 3px 6px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .business-seller-badge {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            padding: 3px 6px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -723,13 +902,14 @@
     <div class="container">
         <div class="search-section">
         <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Enter product keyword (e.g., 'wireless earbuds', 'phone case')">
+                <input type="text" id="searchInput" placeholder="Enter 2-10 word search (e.g., 'wireless bluetooth earbuds waterproof')">
                 <button id="searchButton">Search Products</button>
             </div>
 
             <div class="filters-section">
                 <div class="filters-title">🎯 Advanced Filters</div>
                 <div class="filters-grid">
+                    <!-- Price Filters -->
                     <div class="filter-group">
                         <label for="minPrice">Min Price ($)</label>
                         <input type="number" id="minPrice" placeholder="e.g., 10" min="0">
@@ -738,6 +918,33 @@
                         <label for="maxPrice">Max Price ($)</label>
                         <input type="number" id="maxPrice" placeholder="e.g., 500" min="0">
                     </div>
+                    
+                    <!-- 🔥 NEW: Enhanced Feedback Filters -->
+                    <div class="filter-group">
+                        <label for="minFeedback">Min Seller Feedback</label>
+                        <input type="number" id="minFeedback" placeholder="e.g., 100" min="0">
+                    </div>
+                    <div class="filter-group">
+                        <label for="maxFeedback">🔥 Max Seller Feedback</label>
+                        <input type="number" id="maxFeedback" placeholder="e.g., 10000" min="0">
+                    </div>
+                    
+                    <!-- 🔥 NEW: Watch Count Filters -->
+                    <div class="filter-group">
+                        <label for="minWatchCount">🔥 Min Watch Count</label>
+                        <input type="number" id="minWatchCount" placeholder="e.g., 10" min="0">
+                    </div>
+                    <div class="filter-group">
+                        <label for="maxWatchCount">🔥 Max Watch Count</label>
+                        <input type="number" id="maxWatchCount" placeholder="e.g., 1000" min="0">
+                    </div>
+                    
+                    <!-- 🔥 NEW: Sold Count Filter -->
+                    <div class="filter-group">
+                        <label for="minSoldCount">🔥 Min Sold Count (90 days)</label>
+                        <input type="number" id="minSoldCount" placeholder="e.g., 5" min="0">
+                    </div>
+                    
                     <div class="filter-group">
                         <label for="condition">Condition</label>
                         <select id="condition">
@@ -756,12 +963,38 @@
                             <option value="-price">Price: High to Low</option>
                             <option value="newlyListed">Newly Listed</option>
                             <option value="endingSoonest">Ending Soonest</option>
+                            <option value="watchCountHigh">🔥 Most Watched</option>
                         </select>
                     </div>
+                    
+                    <!-- 🔥 NEW: Search Mode -->
                     <div class="filter-group">
-                        <label for="minFeedback">Min Seller Feedback</label>
-                        <input type="number" id="minFeedback" placeholder="e.g., 100" min="0">
+                        <label for="searchMode">🔥 Search Mode</label>
+                        <select id="searchMode">
+                            <option value="enhanced">🚀 Enhanced (Multi-word)</option>
+                            <option value="exact">📍 Exact Phrase</option>
+                            <option value="broad">🌐 Broad Search</option>
+                        </select>
                     </div>
+                    
+                    <!-- 🔥 NEW: Location Filter -->
+                    <div class="filter-group">
+                        <label for="itemLocation">🔥 Item Location</label>
+                        <select id="itemLocation">
+                            <option value="">Any Location</option>
+                            <option value="US">United States</option>
+                            <option value="GB">United Kingdom</option>
+                            <option value="DE">Germany</option>
+                            <option value="AU">Australia</option>
+                            <option value="CA">Canada</option>
+                            <option value="FR">France</option>
+                            <option value="IT">Italy</option>
+                            <option value="ES">Spain</option>
+                            <option value="JP">Japan</option>
+                            <option value="CN">China</option>
+                        </select>
+                    </div>
+                    
                     <div class="filter-group">
                         <label for="resultLimit">Results Limit</label>
                         <select id="resultLimit">
@@ -773,17 +1006,92 @@
                     </div>
                 </div>
                 
-                <div class="checkbox-group">
-                    <input type="checkbox" id="freeShipping">
-                    <label for="freeShipping">🚚 Free Shipping Only</label>
+                <!-- 🔥 ENHANCED: Comprehensive Checkbox Filters -->
+                <div class="filters-subtitle">🛡️ Quality & Trust Filters</div>
+                <div class="checkbox-filters">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="freeShipping">
+                        <label for="freeShipping">🚚 Free Shipping Only</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="buyItNowOnly">
+                        <label for="buyItNowOnly">💰 Buy It Now Only</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="topRatedSellers">
+                        <label for="topRatedSellers">⭐ Top Rated Sellers Only</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="businessSellers">
+                        <label for="businessSellers">🏢 Business Sellers Only</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="hasReturns">
+                        <label for="hasReturns">🔄 Returns Accepted</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="authenticityVerified">
+                        <label for="authenticityVerified">✅ Authenticity Verified</label>
+                    </div>
                 </div>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="buyItNowOnly">
-                    <label for="buyItNowOnly">💰 Buy It Now Only</label>
+                
+                <div class="filters-subtitle">📦 Shipping & Logistics Filters</div>
+                <div class="checkbox-filters">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="fastNFree">
+                        <label for="fastNFree">⚡ Fast 'N Free Shipping</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="internationalShipping">
+                        <label for="internationalShipping">🌍 International Shipping</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="localPickupOnly">
+                        <label for="localPickupOnly">📍 Local Pickup Only</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="charitableItems">
+                        <label for="charitableItems">❤️ Supports Charity</label>
+                    </div>
                 </div>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="topRatedSellers">
-                    <label for="topRatedSellers">⭐ Top Rated Sellers Only</label>
+                
+                <div class="filters-subtitle">📊 Market Research Filters</div>
+                <div class="checkbox-filters">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="soldItemsOnly">
+                        <label for="soldItemsOnly">📈 Sold/Completed Items Only</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="excludeAuctions">
+                        <label for="excludeAuctions">🚫 Exclude Auctions</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="includeSoldCount">
+                        <label for="includeSoldCount">🔥 Include Sold Count Data</label>
+                        <small style="color: #6c757d; display: block;">(Uses Marketplace Insights API)</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🔥 NEW: Enhanced Search Tips -->
+            <div class="search-tips">
+                <h4>💡 Multi-Word Search Tips</h4>
+                <div class="tips-grid">
+                    <div class="tip-card">
+                        <strong>Enhanced Mode (Default):</strong>
+                        <p>Automatically optimizes your search. Works great for 2-10 words.</p>
+                        <em>Example: "wireless bluetooth earbuds waterproof" → Smart formatting</em>
+                    </div>
+                    <div class="tip-card">
+                        <strong>Exact Phrase Mode:</strong>
+                        <p>Searches for the exact phrase in quotes.</p>
+                        <em>Example: "iPhone 15 Pro Max" → Exact match only</em>
+                    </div>
+                    <div class="tip-card">
+                        <strong>Broad Search Mode:</strong>
+                        <p>eBay's default OR search - finds items with any of your words.</p>
+                        <em>Example: "phone case blue" → phone OR case OR blue</em>
+                    </div>
                 </div>
             </div>
 
@@ -849,10 +1157,27 @@
         const condition = document.getElementById('condition');
         const sortOrder = document.getElementById('sortOrder');
         const minFeedback = document.getElementById('minFeedback');
+        const maxFeedback = document.getElementById('maxFeedback');
+        const minWatchCount = document.getElementById('minWatchCount');
+        const maxWatchCount = document.getElementById('maxWatchCount');
+        const minSoldCount = document.getElementById('minSoldCount');
+        const searchMode = document.getElementById('searchMode');
+        const itemLocation = document.getElementById('itemLocation');
         const resultLimit = document.getElementById('resultLimit');
         const freeShipping = document.getElementById('freeShipping');
         const buyItNowOnly = document.getElementById('buyItNowOnly');
         const topRatedSellers = document.getElementById('topRatedSellers');
+        const businessSellers = document.getElementById('businessSellers');
+        const hasReturns = document.getElementById('hasReturns');
+        const authenticityVerified = document.getElementById('authenticityVerified');
+        const fastNFree = document.getElementById('fastNFree');
+        const internationalShipping = document.getElementById('internationalShipping');
+        const localPickupOnly = document.getElementById('localPickupOnly');
+        const charitableItems = document.getElementById('charitableItems');
+        const soldItemsOnly = document.getElementById('soldItemsOnly');
+        const excludeAuctions = document.getElementById('excludeAuctions');
+        const includeSoldCount = document.getElementById('includeSoldCount');
+
 
         const performSearch = async () => {
             const keyword = searchInput.value.trim();
@@ -871,7 +1196,12 @@
                 // Build query parameters with filters
                 const params = new URLSearchParams({
                     keyword: keyword,
-                    limit: resultLimit.value
+                    limit: resultLimit.value,
+                    search_mode: searchMode.value,
+                    item_location: itemLocation.value,
+                    sold_items_only: soldItemsOnly.checked ? 'true' : 'false',
+                    exclude_auctions: excludeAuctions.checked ? 'true' : 'false',
+                    include_sold_count: includeSoldCount.checked ? 'true' : 'false'
                 });
 
                 // Add filters if specified
@@ -880,9 +1210,20 @@
                 if (condition.value) params.append('condition', condition.value);
                 if (sortOrder.value) params.append('sort', sortOrder.value);
                 if (minFeedback.value) params.append('min_feedback_score', minFeedback.value);
+                if (maxFeedback.value) params.append('max_feedback_score', maxFeedback.value);
+                if (minWatchCount.value) params.append('min_watch_count', minWatchCount.value);
+                if (maxWatchCount.value) params.append('max_watch_count', maxWatchCount.value);
+                if (minSoldCount.value) params.append('min_sold_count', minSoldCount.value);
                 if (freeShipping.checked) params.append('free_shipping_only', 'true');
                 if (buyItNowOnly.checked) params.append('buy_it_now_only', 'true');
                 if (topRatedSellers.checked) params.append('top_rated_sellers_only', 'true');
+                if (businessSellers.checked) params.append('business_sellers_only', 'true');
+                if (hasReturns.checked) params.append('has_returns', 'true');
+                if (authenticityVerified.checked) params.append('authenticity_verified', 'true');
+                if (fastNFree.checked) params.append('fast_n_free', 'true');
+                if (internationalShipping.checked) params.append('international_shipping', 'true');
+                if (localPickupOnly.checked) params.append('local_pickup_only', 'true');
+                if (charitableItems.checked) params.append('charitable_items', 'true');
 
                 console.log('Search URL:', `/api/search?${params.toString()}`);
 
@@ -993,53 +1334,132 @@
         };
 
         // Helper function to generate sold count badge
-        function generateSoldCountBadge(product) {
-            let soldCountHtml = '';
+        function generateSoldCountBadge(item) {
+            const soldData = item.sold_data || {};
+            const watchCount = item.watch_count || 0;
             
-            if (product.sold_count_estimate) {
-                const estimate = product.sold_count_estimate.estimated_sold;
-                const confidence = product.sold_count_estimate.confidence_level;
-                const confidenceClass = confidence.toLowerCase().replace(' ', '-');
+            if (soldData.marketplace_insights && soldData.total_sold_90_days !== undefined) {
+                // Real Marketplace Insights API data
+                const soldCount = soldData.total_sold_90_days;
+                const monthlySales = soldData.estimated_monthly_sales || Math.round(soldCount / 3);
                 
-                soldCountHtml = `
+                let badgeClass = "sold-count-badge";
+                if (soldCount >= 50) badgeClass += " high-demand";
+                
+                return `
+                    <div class="${badgeClass}">
+                        🔥 REAL DATA: ${soldCount} sold (90 days)
+                    </div>
                     <div class="sold-count-badge">
-                        🔥 ~${estimate} sold 
-                        <span class="confidence-indicator confidence-${confidenceClass}" title="Confidence: ${confidence}"></span>
+                        📈 ~${monthlySales}/month
                     </div>
                 `;
-            } else if (product.sold_count && product.sold_count > 0) {
-                soldCountHtml = `
-                    <div class="sold-count-badge">
-                        ✅ ${product.sold_count} sold
+            } else if (soldData.total_sold_90_days !== undefined) {
+                // Enhanced estimation
+                const soldCount = soldData.total_sold_90_days;
+                const confidence = soldData.confidence_level || 'medium';
+                const monthlySales = soldData.estimated_monthly_sales || Math.round(soldCount / 3);
+                
+                let badgeClass = "sold-count-badge estimated";
+                if (soldCount >= 50) badgeClass += " high-demand";
+                
+                return `
+                    <div class="${badgeClass}">
+                        📊 ~${soldCount} sold (est. 90d)
                     </div>
+                    <div class="sold-count-badge estimated">
+                        📈 ~${monthlySales}/month (${confidence} confidence)
+                    </div>
+                    ${watchCount > 0 ? `<div class="watch-count-badge">👀 ${watchCount} watching</div>` : ''}
                 `;
+            } else if (watchCount > 0) {
+                // Fallback to watch count display
+                return `<div class="watch-count-badge">👀 ${watchCount} watching</div>`;
             }
             
-            return soldCountHtml;
+            return '<div class="sold-count-badge">📊 Sales data not available</div>';
         }
 
-        // Helper function to generate dropshipping insights
-        function generateDropshippingInsights(product) {
-            let insightsHtml = '';
+        function generateDropshippingInsights(item) {
+            const insights = item.dropshipping_insights || {};
+            const soldData = item.sold_data || {};
+            const seller = item.seller || {};
             
-            if (product.dropshipping_insights) {
-                const insights = product.dropshipping_insights;
-                const recClass = insights.recommendation.toLowerCase().replace(/[^a-z]/g, '-');
-                
-                insightsHtml = `
-                    <div class="dropshipping-insights">
-                        <div class="insight-tags">
-                            <span class="insight-tag demand">📊 ${insights.demand_indicator} Demand</span>
-                            <span class="insight-tag profit">💰 ${insights.profit_potential} Profit</span>
-                        </div>
-                        <div class="dropshipping-recommendation recommendation-${recClass}">
-                            ${insights.recommendation}
-                        </div>
-                    </div>
-                `;
+            if (!insights.recommendation) {
+                return '<div class="dropshipping-insight">💡 Analyzing product potential...</div>';
             }
             
-            return insightsHtml;
+            const recommendation = insights.recommendation;
+            const demandLevel = insights.demand_level || 'unknown';
+            const profitPotential = insights.profit_potential || 'unknown';
+            const competitionLevel = insights.competition_level || 'unknown';
+            
+            let insightClass = "dropshipping-insight";
+            let icon = "💡";
+            let message = "";
+            
+            switch (recommendation) {
+                case "excellent_opportunity":
+                    insightClass += " excellent";
+                    icon = "🚀";
+                    message = `EXCELLENT opportunity! High demand (${demandLevel}), low competition`;
+                    break;
+                case "good_opportunity":
+                    insightClass += " good";
+                    icon = "✅";
+                    message = `GOOD opportunity! ${demandLevel} demand, ${profitPotential} profit potential`;
+                    break;
+                case "consider":
+                    insightClass += "";
+                    icon = "🤔";
+                    message = `Consider this product. ${demandLevel} demand, monitor competition`;
+                    break;
+                case "monitor":
+                    insightClass += "";
+                    icon = "📊";
+                    message = `Monitor this product. Check trends and competition`;
+                    break;
+                case "avoid":
+                    insightClass += " avoid";
+                    icon = "⚠️";
+                    message = `Low opportunity. ${demandLevel} demand or high competition`;
+                    break;
+                default:
+                    message = "Analyzing market potential...";
+            }
+            
+            // Add additional insights
+            const trends = insights.market_trends || [];
+            const keyFactors = insights.key_factors || {};
+            
+            let trendIcons = [];
+            if (trends.includes("high_interest")) trendIcons.push("🔥");
+            if (trends.includes("competitive_bidding")) trendIcons.push("⚡");
+            if (trends.includes("free_shipping_expected")) trendIcons.push("🚚");
+            if (trends.includes("professional_sellers_present")) trendIcons.push("🏢");
+            
+            let additionalInfo = "";
+            if (soldData.marketplace_insights) {
+                additionalInfo = '<small style="color: #28a745;">✓ Verified sales data</small>';
+            } else if (soldData.confidence_level) {
+                additionalInfo = `<small>Estimation confidence: ${soldData.confidence_level}</small>`;
+            }
+            
+            // Enhanced seller quality indicators
+            let sellerBadges = [];
+            if (seller.top_rated) sellerBadges.push('<span class="authenticity-badge">⭐ Top Rated</span>');
+            if (seller.business_seller) sellerBadges.push('<span class="business-seller-badge">🏢 Business</span>');
+            if (item.authenticity_verified) sellerBadges.push('<span class="authenticity-badge">✅ Verified</span>');
+            if (item.returns_accepted) sellerBadges.push('<span class="authenticity-badge">🔄 Returns</span>');
+            
+            return `
+                <div class="${insightClass}">
+                    ${icon} <strong>${message}</strong>
+                    ${trendIcons.length > 0 ? `<br><small>Trends: ${trendIcons.join(' ')}</small>` : ''}
+                    ${additionalInfo ? `<br>${additionalInfo}` : ''}
+                </div>
+                ${sellerBadges.length > 0 ? `<div style="margin: 5px 0;">${sellerBadges.join(' ')}</div>` : ''}
+            `;
         }
 
         // Enhanced function to open eBay link
@@ -1111,7 +1531,7 @@
             }
         };
 
-        [minPrice, maxPrice, condition, sortOrder, minFeedback, freeShipping, buyItNowOnly, topRatedSellers].forEach(element => {
+        [minPrice, maxPrice, condition, sortOrder, minFeedback, maxFeedback, minWatchCount, maxWatchCount, minSoldCount, searchMode, itemLocation, resultLimit, freeShipping, buyItNowOnly, topRatedSellers, businessSellers, hasReturns, authenticityVerified, fastNFree, internationalShipping, localPickupOnly, charitableItems, soldItemsOnly, excludeAuctions, includeSoldCount].forEach(element => {
             element.addEventListener('change', debounceSearch);
         });
 
@@ -1124,14 +1544,21 @@
 
         // Add some sample search suggestions
         const searchSuggestions = [
-            'wireless earbuds',
-            'phone case',
-            'fitness tracker',
-            'laptop stand',
-            'bluetooth speaker',
-            'coffee maker',
-            'gaming headset',
-            'smart watch'
+            'wireless bluetooth earbuds noise canceling',
+            'iPhone 15 Pro Max case protective',
+            'fitness tracker heart rate monitor',
+            'laptop stand adjustable aluminum',
+            'bluetooth speaker waterproof portable',
+            'coffee maker programmable stainless steel',
+            'gaming headset RGB mechanical keyboard',
+            'smart watch fitness tracker GPS',
+            'phone case MagSafe compatible clear',
+            'wireless charger fast charging pad',
+            'computer monitor 4K gaming curved',
+            'power bank portable fast charging',
+            'bluetooth mouse wireless ergonomic',
+            'smartphone gimbal stabilizer 3-axis',
+            'drone camera 4K GPS return home'
         ];
 
         // Add placeholder rotation
