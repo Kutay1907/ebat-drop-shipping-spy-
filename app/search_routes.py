@@ -15,9 +15,9 @@ except ImportError:
 
 # Import the API client
 try:
-    from app.ebay_client import ebay_client, EbayAPIError
+    from app.ebay_api_client import ebay_client, EbayAPIError
 except ImportError:
-    from ebay_client import ebay_client, EbayAPIError
+    from ebay_api_client import ebay_client, EbayAPIError
 
 logger = logging.getLogger(__name__)
 
@@ -504,7 +504,7 @@ async def get_sold_count_data(
 def process_ebay_results_enhanced(
     ebay_response: Dict[str, Any], 
     marketplace: str,
-    sold_count_data: Dict[str, Any] = None,
+    sold_count_data: Optional[Dict[str, Any]] = None,
     include_sold_count: bool = True
 ) -> Dict[str, Any]:
     """
