@@ -74,6 +74,7 @@ async def search_products(
     marketplace: str = Query("EBAY_US", description="eBay marketplace"),
     top_rated_sellers_only: bool = Query(False, description="Show only top-rated sellers"),
     min_seller_feedback: Optional[int] = Query(None, ge=0, description="Minimum seller feedback score"),
+    max_seller_feedback: Optional[int] = Query(None, ge=0, description="Maximum seller feedback score"),
     item_location_country: Optional[str] = Query(None, description="Item location country (e.g., US, GB, DE)"),
     search_mode: str = Query("enhanced", description="Search mode - 'enhanced', 'exact', 'broad'")
 ) -> Dict[str, Any]:
@@ -195,12 +196,21 @@ async def search_products(
             if top_rated_sellers_only and not seller.get("topRatedSeller", False):
                 continue
             
-            if min_seller_feedback is not None:
-                seller_feedback = seller.get("feedbackScore", 0)
-                try:
-                    if int(seller_feedback) < min_seller_feedback:
-                        continue
-                except (ValueError, TypeError):
+            # Get seller feedback score
+            try:
+                seller_feedback = int(seller.get("feedbackScore", 0))
+                
+                # Check minimum feedback score
+                if min_seller_feedback is not None and seller_feedback < min_seller_feedback:
+                    continue
+                    
+                # Check maximum feedback score
+                if max_seller_feedback is not None and seller_feedback > max_seller_feedback:
+                    continue
+                    
+            except (ValueError, TypeError):
+                # Skip items with invalid feedback score
+                if min_seller_feedback is not None or max_seller_feedback is not None:
                     continue
             
             filtered_items.append(item)
@@ -217,7 +227,10 @@ async def search_products(
                 "free_shipping_only": free_shipping_only,
                 "buy_it_now_only": buy_it_now_only,
                 "top_rated_sellers_only": top_rated_sellers_only,
-                "min_seller_feedback": min_seller_feedback,
+                "seller_feedback_range": {
+                    "min": min_seller_feedback,
+                    "max": max_seller_feedback
+                },
                 "item_location_country": item_location_country,
                 "results_limit": limit
             },
