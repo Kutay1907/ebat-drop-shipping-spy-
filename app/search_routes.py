@@ -196,24 +196,20 @@ async def search_products(
             if top_rated_sellers_only and not seller.get("topRatedSeller", False):
                 continue
             
-            # Get seller feedback score
+            # Get seller feedback score and apply filters
             try:
                 seller_feedback = int(seller.get("feedbackScore", 0))
-                logger.info(f"Seller feedback for item {item.get('itemId')}: {seller_feedback}")
                 
                 # Check minimum feedback score
                 if min_seller_feedback is not None and seller_feedback < min_seller_feedback:
-                    logger.info(f"Skipping item {item.get('itemId')} - feedback {seller_feedback} below minimum {min_seller_feedback}")
                     continue
                     
                 # Check maximum feedback score
                 if max_seller_feedback is not None and seller_feedback > max_seller_feedback:
-                    logger.info(f"Skipping item {item.get('itemId')} - feedback {seller_feedback} above maximum {max_seller_feedback}")
                     continue
                     
-            except (ValueError, TypeError) as e:
-                # Skip items with invalid feedback score
-                logger.warning(f"Invalid feedback score for item {item.get('itemId')}: {seller.get('feedbackScore')} - Error: {str(e)}")
+            except (ValueError, TypeError):
+                # If feedback score is not a valid number, skip if a filter is active
                 if min_seller_feedback is not None or max_seller_feedback is not None:
                     continue
             

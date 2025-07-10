@@ -473,12 +473,29 @@
         }
 
         /* Loading States */
-        .loading {
+        .loading, .empty-state {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 3rem;
+            text-align: center;
+        }
+        .empty-state i {
+            font-size: 3rem;
+            color: var(--border-color);
+            margin-bottom: 1rem;
+        }
+
+        .filter-notice {
+            background-color: #eff6ff;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            font-size: 0.875rem;
+            text-align: center;
         }
 
         .spinner {
@@ -768,7 +785,10 @@
             <div class="empty-state hidden" id="emptyState">
                 <i class="fas fa-search"></i>
                 <h3>No products found</h3>
-                <p>Try adjusting your search terms or filters</p>
+                <p>Try adjusting your search terms or filters.</p>
+                <div class="filter-notice hidden" id="filterNotice">
+                    <strong>Note:</strong> Filters like seller feedback are applied to the initial search results. If you get no results, try increasing the "Results Per Search" limit to find matching products.
+                </div>
             </div>
         </div>
     </div>
@@ -912,13 +932,23 @@
         // Display results
         function displayResults() {
             resultsSection.classList.remove('hidden');
+            const filterNotice = document.getElementById('filterNotice');
             
             if (searchResults.length === 0) {
                 showEmptyState();
+                // Show the notice if any of the post-search filters are active
+                const minFeedback = document.getElementById('minSellerFeedback').value;
+                const maxFeedback = document.getElementById('maxSellerFeedback').value;
+                if (minFeedback || maxFeedback) {
+                    filterNotice.classList.remove('hidden');
+                } else {
+                    filterNotice.classList.add('hidden');
+                }
                 return;
             }
 
             hideEmptyState();
+            filterNotice.classList.add('hidden');
             productsGrid.innerHTML = '';
 
             searchResults.forEach(product => {
