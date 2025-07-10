@@ -199,17 +199,21 @@ async def search_products(
             # Get seller feedback score
             try:
                 seller_feedback = int(seller.get("feedbackScore", 0))
+                logger.info(f"Seller feedback for item {item.get('itemId')}: {seller_feedback}")
                 
                 # Check minimum feedback score
                 if min_seller_feedback is not None and seller_feedback < min_seller_feedback:
+                    logger.info(f"Skipping item {item.get('itemId')} - feedback {seller_feedback} below minimum {min_seller_feedback}")
                     continue
                     
                 # Check maximum feedback score
                 if max_seller_feedback is not None and seller_feedback > max_seller_feedback:
+                    logger.info(f"Skipping item {item.get('itemId')} - feedback {seller_feedback} above maximum {max_seller_feedback}")
                     continue
                     
-            except (ValueError, TypeError):
+            except (ValueError, TypeError) as e:
                 # Skip items with invalid feedback score
+                logger.warning(f"Invalid feedback score for item {item.get('itemId')}: {seller.get('feedbackScore')} - Error: {str(e)}")
                 if min_seller_feedback is not None or max_seller_feedback is not None:
                     continue
             
@@ -266,6 +270,16 @@ def process_ebay_results(ebay_response: Dict[str, Any], marketplace: str) -> Dic
     for item in ebay_response.get("itemSummaries", []):
         item_id = item.get("itemId")
         
+        # Extract seller information
+        seller_info = item.get("seller", {})
+        seller = {
+            "username": seller_info.get("username"),
+            "feedback_score": int(seller_info.get("feedbackScore", 0)),  # Ensure integer
+            "feedback_percentage": seller_info.get("feedbackPercentage"),
+            "top_rated_seller": seller_info.get("topRatedSeller", False),
+            "business_seller": seller_info.get("sellerAccountType") == "BUSINESS"
+        }
+        
         # Extract clean, essential data
         processed_item = {
             "item_id": item_id,
@@ -294,13 +308,7 @@ def process_ebay_results(ebay_response: Dict[str, Any], marketplace: str) -> Dic
             ),
             
             # Seller information
-            "seller": {
-                "username": item.get("seller", {}).get("username"),
-                "feedback_score": item.get("seller", {}).get("feedbackScore", 0),
-                "feedback_percentage": item.get("seller", {}).get("feedbackPercentage"),
-                "top_rated_seller": item.get("seller", {}).get("topRatedSeller", False),
-                "business_seller": item.get("seller", {}).get("sellerAccountType") == "BUSINESS"
-            },
+            "seller": seller,
             
             # Listing details
             "buying_options": item.get("buyingOptions", []),
