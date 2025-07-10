@@ -1,200 +1,200 @@
-# eBay Dropshipping Spy
+# eBay Dropshipping Spy Pro
 
-Advanced eBay product research tool for dropshipping entrepreneurs.
+A clean, modern, and user-friendly eBay product research tool designed for dropshipping entrepreneurs. Find profitable products with ease using our streamlined interface and powerful search capabilities.
 
-## Features
+## ✨ Features
 
-- **🔥 Multi-Word Search Optimization**: Enhanced search supporting 2-10 word phrases with intelligent formatting
-- **📊 Intelligent Sold Count Estimation**: Algorithmic estimation of 90-day sales data based on seller performance, price, and category factors
-- **👀 Smart Watch Count Estimation**: Realistic watch count predictions using price, condition, and seller metrics
-- **🎯 15+ Advanced Filters**: Comprehensive filtering including feedback scores, authenticity verification, returns policy, and more
-- **🏪 Enhanced Seller Analysis**: Business seller filtering, top-rated seller identification, shipping options analysis
-- **💡 Dropshipping Insights**: Intelligent market analysis with demand scoring, competition assessment, and profit potential
+### 🎯 **Core Search Features**
+- **Smart Product Search**: Enhanced multi-word search with intelligent keyword processing
+- **Advanced Filtering**: Price range, condition, location, shipping options, and seller quality filters
+- **Quick Search Presets**: One-click search for popular product categories
+- **Real-time Results**: Fast, responsive search with clean product display
 
-## Quick Start
+### 🎨 **Beautiful User Interface**
+- **Modern Design**: Clean, professional interface with premium aesthetics
+- **Mobile Responsive**: Optimized for all devices and screen sizes
+- **Intuitive Navigation**: Easy-to-use controls and clear product information
+- **Premium Experience**: Designed for subscriber satisfaction
 
-1. **Set up eBay API credentials** in `.env`:
+### 🔍 **Smart Filtering Options**
+- Price range filtering (min/max)
+- Product condition selection
+- Location-based filtering
+- Free shipping options
+- Top-rated sellers only
+- Buy It Now vs Auction filtering
+
+## 🚀 Quick Start
+
+### 1. **Set up eBay API credentials**
+
+Create a `.env` file in the project root:
+
 ```env
-# Required for Application Token (Recommended)
+# Required eBay API Credentials
 EBAY_CLIENT_ID=your_ebay_app_id
 EBAY_CLIENT_SECRET=your_ebay_cert_id
-
-# Optional: For User Token (More features but requires user login)
-EBAY_REDIRECT_URI=your_redirect_uri
 ```
 
-2. **Get eBay API Credentials**:
-   - Visit [eBay Developer Program](https://developer.ebay.com/)
-   - Create an account and new application  
-   - Get your App ID (Client ID) and Cert ID (Client Secret)
-   - Add them to your `.env` file
+### 2. **Get eBay Developer Credentials**
 
-3. **Install dependencies**:
+1. Visit [eBay Developer Program](https://developer.ebay.com/)
+2. Create an account and new application
+3. Get your App ID (Client ID) and Cert ID (Client Secret)
+4. Add them to your `.env` file
+
+### 3. **Install Dependencies**
+
 ```bash
 pip install -r requirements.txt
 ```
 
-4. **Run the application**:
+### 4. **Run the Application**
+
 ```bash
-python -m uvicorn app.main:app --reload
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-5. **Open your browser** to `http://localhost:8000`
+### 5. **Access the Application**
 
-## 🔍 **Important Note About Data Sources**
+Open your browser to: `http://localhost:8000`
 
-### **Sold Count & Watch Count Data**
+## 🎯 How to Use
 
-Due to eBay API limitations, this application uses **intelligent algorithmic estimation** for sold count and watch count data:
+### **Basic Search**
+1. Enter product keywords in the search box
+2. Click "Search Products" or press Enter
+3. Browse results with clean product cards
 
-#### **Why Not Real Data?**
-- **eBay Marketplace Insights API**: Requires special business approval (Limited Release)
-- **eBay Browse API**: Does not provide watch count or sold count fields
-- **eBay Trading API**: Being deprecated, limited access to watch/bid counts
-- **eBay Completed Listings**: Only available through eBay's web interface, not APIs
+### **Quick Search**
+- Use preset buttons for popular categories:
+  - Wireless Earbuds
+  - Phone Cases
+  - Bluetooth Speakers
+  - Fitness Trackers
+  - And more...
 
-#### **Our Solution: Smart Estimation**
-The application provides realistic estimates based on:
+### **Advanced Filtering**
+1. Click "Advanced Filters" to expand options
+2. Set price ranges, conditions, locations
+3. Enable additional filters like free shipping
+4. Search automatically applies all filters
 
-**Sold Count Estimation Factors:**
-- Seller feedback score and percentage
-- Item price range and category popularity  
-- Business vs individual seller type
-- Shipping options and seller performance
+### **Product Analysis**
+- View key product information at a glance
+- See seller ratings and feedback scores
+- Identify top-rated sellers and premium listings
+- Direct links to eBay product pages
 
-**Watch Count Estimation Factors:**
-- Item price (higher prices get more watchers)
-- Item condition (new items get more attention)
-- Seller reputation and feedback
-- Free shipping availability
+## 🛠 API Endpoints
 
-#### **Accuracy & Reliability**
-- Estimates are calibrated against real-world eBay patterns
-- Provides realistic ranges for dropshipping analysis
-- Includes demand scoring and competition assessment
-- Perfect for market research and trend identification
-
-### **For Real Sold Count Data**
-If you need actual sold count data, consider:
-- **Manual Research**: Use eBay's completed listings search
-- **Third-party Services**: WatchCount.com, TeraPeak, or similar tools
-- **eBay Marketplace Insights API**: Apply for business approval
-- **Web Scraping**: Follow eBay's terms of service
-
-## 🎯 **Advanced Features**
-
-### **Multi-Word Search Modes**
-- **Enhanced Mode** (Default): Optimizes 2-10 word searches for best results
-- **Exact Phrase Mode**: Searches for exact phrases in quotes
-- **Broad Search Mode**: eBay's default OR search
-
-### **Comprehensive Filters**
-- Price range, condition, location filters
-- Seller feedback score filtering  
-- Watch count and sold count estimation filters
-- Authenticity verification, returns policy
-- Business sellers, top-rated sellers
-- Shipping options and local pickup
-- Auction vs Buy It Now filtering
-
-### **Dropshipping Insights**
-- **Demand Score**: 1-100 rating based on estimated sales and interest
-- **Competition Level**: Market saturation analysis
-- **Profit Potential**: Price-based profitability assessment  
-- **Shipping Score**: Delivery options and speed rating
-- **Seller Reliability**: Feedback-based seller assessment
-
-## 📊 **API Endpoints**
-
-### **Search Products**
-```
+### **Main Search Endpoint**
+```http
 GET /api/search
 ```
 
-**Enhanced Parameters:**
-- `q`: Search query (2-10 words recommended)
-- `search_mode`: enhanced/exact/broad search optimization
-- `min_sold_count`/`max_sold_count`: Filter by estimated 90-day sales
-- `min_watch_count`/`max_watch_count`: Filter by estimated watchers
-- `min_feedback_score`/`max_feedback_score`: Seller feedback filtering
-- `authenticity_verification`: Items with authenticity guarantee
-- `returns_accepted`: Items accepting returns
-- `business_seller`: Business sellers only
-- `free_shipping`: Free shipping only
-- And 10+ more advanced filters...
+**Parameters:**
+- `keyword` (required): Search terms
+- `limit`: Number of results (1-200, default: 50)
+- `min_price`: Minimum price filter
+- `max_price`: Maximum price filter
+- `condition`: Item condition filter
+- `sort`: Sort order (bestMatch, price, -price, etc.)
+- `free_shipping_only`: Boolean for free shipping filter
+- `top_rated_sellers_only`: Boolean for top-rated sellers
+- `item_location_country`: Country code (US, GB, DE, etc.)
 
-### **Server Health**
+### **Categories Endpoint**
+```http
+GET /api/categories
 ```
-GET /debug/health
+Returns popular eBay categories for filtering.
+
+## 🔧 Technical Stack
+
+- **Backend**: FastAPI (Python)
+- **Frontend**: Modern HTML5, CSS3, JavaScript
+- **API Integration**: eBay Browse API
+- **Styling**: Custom CSS with modern design principles
+- **Responsive**: Mobile-first design approach
+
+## 📱 User Experience Features
+
+### **Clean Interface**
+- Professional gradient background
+- Card-based layout for products
+- Intuitive navigation and controls
+- Clear typography and spacing
+
+### **Smart Search**
+- Auto-suggestion with quick filters
+- Intelligent keyword processing
+- Real-time search results
+- Relevant product recommendations
+
+### **Product Cards**
+- High-quality product images
+- Clear pricing and condition information
+- Seller ratings and badges
+- Direct action buttons
+
+### **Responsive Design**
+- Optimized for desktop, tablet, and mobile
+- Touch-friendly interface elements
+- Adaptive grid layouts
+- Mobile navigation
+
+## 🎨 Design Philosophy
+
+This application is built with subscriber satisfaction in mind:
+
+- **Simplicity**: Clean, uncluttered interface
+- **Speed**: Fast search and responsive interactions
+- **Clarity**: Clear product information and pricing
+- **Professional**: Premium look and feel
+- **Accessibility**: Easy to use for all skill levels
+
+## 🔒 Security & Privacy
+
+- Secure API credential handling
+- No personal data collection
+- Privacy-focused design
+- Secure eBay API integration
+
+## 📈 Perfect for Dropshippers
+
+- **Product Research**: Find trending and profitable products
+- **Competition Analysis**: See seller ratings and pricing
+- **Market Validation**: Quick access to eBay marketplace data
+- **Supplier Discovery**: Identify reliable sellers
+- **Profit Opportunities**: Filter by price ranges and conditions
+
+## 🚀 Deployment
+
+### **Railway Deployment**
+1. Connect your GitHub repository
+2. Set environment variables in Railway dashboard:
+   - `EBAY_CLIENT_ID`
+   - `EBAY_CLIENT_SECRET`
+3. Deploy automatically
+
+### **Local Development**
+```bash
+# Install dependencies
+pip install fastapi uvicorn httpx python-dotenv
+
+# Run development server
+uvicorn app.main:app --reload
 ```
 
-## 🔧 **Development**
+## 📞 Support
 
-### **Project Structure**
-```
-├── app/
-│   ├── main.py              # FastAPI application
-│   ├── search_routes.py     # Enhanced search endpoints
-│   ├── debug_routes.py      # Health and debug endpoints
-│   └── ebay_api_client.py   # eBay API integration
-├── static/
-│   └── index.html          # Frontend interface
-├── requirements.txt        # Python dependencies
-└── README.md              # This file
-```
-
-### **Key Technologies**
-- **Backend**: FastAPI, Python 3.8+
-- **Frontend**: Vanilla HTML/CSS/JavaScript
-- **APIs**: eBay Browse API (REST)
-- **Estimation**: Custom algorithms for sold/watch count prediction
-
-## 🚀 **Usage Examples**
-
-### **Multi-Word Product Research**
-```
-Search: "wireless bluetooth earbuds waterproof"
-Mode: Enhanced (default)
-Filters: min_sold_count=10, business_seller=true
-```
-
-### **Dropshipping Opportunity Analysis**
-```
-Search: "phone case iPhone 15 Pro Max"
-Filters: 
-- min_watch_count=20
-- max_price=50
-- returns_accepted=true
-- free_shipping=true
-```
-
-### **Market Trend Analysis**
-```
-Search: "fitness tracker heart rate monitor" 
-Sort: newly_listed
-Filters: min_feedback_score=1000, authenticity_verification=true
-```
-
-## ⚖️ **Legal & Compliance**
-
-- Uses official eBay Browse API within rate limits
-- Respects eBay's Terms of Service
-- Estimation algorithms are original intellectual property
-- No web scraping or unauthorized data access
-- Suitable for legitimate market research
-
-## 🤝 **Contributing**
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## 📝 **License**
-
-MIT License - see LICENSE file for details.
+For technical support or questions:
+- Check the eBay Developer documentation
+- Ensure API credentials are correctly set
+- Verify network connectivity
+- Review server logs for errors
 
 ---
 
-**Perfect for**: Dropshipping research, market analysis, competitive intelligence, pricing strategy, product sourcing, and e-commerce trend identification. 
+**Built for dropshipping entrepreneurs who value simplicity, speed, and results.** 

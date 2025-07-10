@@ -4,7 +4,6 @@ from enum import Enum
 from datetime import datetime, timezone
 import sys
 import os
-import random
 
 # Add the project root to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,466 +23,364 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["search"])
 
-class SearchMode(str, Enum):
-    ENHANCED = "enhanced"
-    EXACT = "exact" 
-    BROAD = "broad"
-
 class SortOrder(str, Enum):
-    BEST_MATCH = "BestMatch"
-    PRICE_LOW = "price"
-    PRICE_HIGH = "-price"
+    """Available sort orders for eBay search."""
+    BEST_MATCH = "bestMatch"
+    PRICE_LOW_TO_HIGH = "price"
+    PRICE_HIGH_TO_LOW = "-price"
     ENDING_SOONEST = "endingSoonest"
     NEWLY_LISTED = "newlyListed"
-    DISTANCE = "distance"
-    CONDITION_NEW = "condition"
+    DISTANCE_NEAREST = "distance"
 
-def estimate_watch_count(item_data: Dict[str, Any]) -> int:
-    """
-    Estimate watch count based on available item data
-    Using realistic factors that correlate with watch activity
-    """
-    base_watch = random.randint(1, 15)  # Base random component
-    
-    # Price factor - higher priced items tend to get more watchers
-    try:
-        price = float(item_data.get('price', {}).get('value', 0))
-        if price > 500:
-            base_watch += random.randint(10, 30)
-        elif price > 100:
-            base_watch += random.randint(5, 15)
-        elif price > 50:
-            base_watch += random.randint(2, 8)
-    except (ValueError, TypeError):
-        pass
-    
-    # Condition factor - new items get more watchers
-    condition = item_data.get('condition', '').lower()
-    if 'new' in condition:
-        base_watch += random.randint(3, 12)
-    elif 'used' in condition:
-        base_watch += random.randint(1, 5)
-    
-    # Seller feedback factor
-    try:
-        feedback_score = int(item_data.get('seller', {}).get('feedbackScore', 0))
-        if feedback_score > 10000:
-            base_watch += random.randint(5, 15)
-        elif feedback_score > 1000:
-            base_watch += random.randint(2, 8)
-    except (ValueError, TypeError):
-        pass
-    
-    # Free shipping bonus
-    shipping_options = item_data.get('shippingOptions', [])
-    for option in shipping_options:
-        if option.get('shippingCost', {}).get('value', '0') == '0':
-            base_watch += random.randint(2, 8)
-            break
-    
-    return min(base_watch, 150)  # Cap at realistic maximum
+class ItemCondition(str, Enum):
+    """Available item conditions."""
+    NEW = "1000"
+    USED = "3000"
+    CERTIFIED_REFURBISHED = "2000"
+    SELLER_REFURBISHED = "2500"
+    FOR_PARTS_OR_NOT_WORKING = "7000"
 
-def estimate_sold_count(item_data: Dict[str, Any]) -> Dict[str, Any]:
+def prepare_search_keywords(keyword: str) -> str:
     """
-    Estimate sold count and sales velocity based on available data
-    Returns realistic estimates for dropshipping analysis
+    Prepare search keywords for optimal eBay results.
     """
-    # Base estimation using seller performance and item characteristics
-    base_sold = random.randint(0, 25)
+    if not keyword:
+        return keyword
     
-    # Seller factor - established sellers tend to sell more
-    try:
-        feedback_score = int(item_data.get('seller', {}).get('feedbackScore', 0))
-        feedback_percentage = float(item_data.get('seller', {}).get('feedbackPercentage', 98))
-        
-        if feedback_score > 50000 and feedback_percentage > 99:
-            base_sold += random.randint(20, 80)
-        elif feedback_score > 10000 and feedback_percentage > 98:
-            base_sold += random.randint(10, 40)
-        elif feedback_score > 1000:
-            base_sold += random.randint(5, 20)
-    except (ValueError, TypeError):
-        pass
+    keyword = keyword.strip()
     
-    # Price factor - reasonably priced items sell more
-    try:
-        price = float(item_data.get('price', {}).get('value', 0))
-        if 20 <= price <= 100:
-            base_sold += random.randint(10, 30)
-        elif 10 <= price <= 200:
-            base_sold += random.randint(5, 20)
-    except (ValueError, TypeError):
-        pass
+    # If already quoted, leave as is
+    if keyword.startswith('"') and keyword.endswith('"'):
+        return keyword
     
-    # Category popularity factor
-    category_id = item_data.get('categories', [{}])[0].get('categoryId', '')
-    popular_categories = ['9355', '58058', '293', '11450', '281']  # Electronics, computers, etc.
-    if category_id in popular_categories:
-        base_sold += random.randint(5, 25)
+    # For multi-word searches, use quotes for better results
+    words = keyword.split()
+    if len(words) > 1:
+        return f'"{keyword}"'
     
-    # Top-rated seller bonus
-    seller_account_type = item_data.get('seller', {}).get('sellerAccountType', '')
-    if 'BUSINESS' in seller_account_type:
-        base_sold += random.randint(3, 15)
-    
-    # Calculate realistic metrics
-    total_sold_90_days = min(base_sold, 200)  # Cap at realistic maximum
-    monthly_avg = round(total_sold_90_days / 3, 1)
-    weekly_avg = round(total_sold_90_days / 12, 1)
-    
-    # Determine demand level
-    if total_sold_90_days >= 50:
-        demand_level = "HIGH"
-    elif total_sold_90_days >= 20:
-        demand_level = "MEDIUM"
-    elif total_sold_90_days >= 5:
-        demand_level = "LOW"
-    else:
-        demand_level = "VERY_LOW"
-    
-    return {
-        "total_sold_90_days": total_sold_90_days,
-        "monthly_average": monthly_avg,
-        "weekly_average": weekly_avg,
-        "demand_level": demand_level,
-        "estimated": True,
-        "data_source": "ALGORITHM_ESTIMATED"
-    }
-
-def optimize_search_query(query: str, mode: SearchMode = SearchMode.ENHANCED) -> str:
-    """
-    Optimize search query for better multi-word results
-    """
-    if not query or len(query.strip()) < 2:
-        return query
-    
-    query = query.strip()
-    
-    if mode == SearchMode.EXACT:
-        # Exact phrase search with quotes
-        return f'"{query}"'
-    elif mode == SearchMode.BROAD:
-        # eBay's default OR search
-        return query
-    else:  # ENHANCED mode (default)
-        # Smart optimization for multi-word queries
-        words = query.split()
-        if len(words) >= 2:
-            # For 2+ words, use strategic formatting for better results
-            if len(words) <= 4:
-                # Use exact phrase for short queries
-                return f'"{query}"'
-            else:
-                # For longer queries, use a mix approach
-                core_terms = ' '.join(words[:3])
-                additional_terms = ' '.join(words[3:])
-                return f'"{core_terms}" {additional_terms}'
-        return query
+    return keyword
 
 @router.get("/search")
 async def search_products(
-    q: str = Query(..., description="Search query (2-10 words recommended)"),
-    category_ids: Optional[str] = Query(None, description="eBay category ID"),
-    min_price: Optional[float] = Query(None, description="Minimum price filter"),
-    max_price: Optional[float] = Query(None, description="Maximum price filter"),
-    condition: Optional[str] = Query(None, description="Item condition filter"),
-    sort: Optional[SortOrder] = Query(SortOrder.BEST_MATCH, description="Sort order"),
-    limit: Optional[int] = Query(50, ge=1, le=200, description="Number of results (1-200)"),
-    offset: Optional[int] = Query(0, ge=0, description="Result offset for pagination"),
-    search_mode: Optional[SearchMode] = Query(SearchMode.ENHANCED, description="Search optimization mode"),
-    
-    # New comprehensive filters
-    min_feedback_score: Optional[int] = Query(None, ge=0, description="Minimum seller feedback score"),
-    max_feedback_score: Optional[int] = Query(None, ge=0, description="Maximum seller feedback score"),
-    min_watch_count: Optional[int] = Query(None, ge=0, description="Minimum estimated watch count"),
-    max_watch_count: Optional[int] = Query(None, ge=0, description="Maximum estimated watch count"),
-    min_sold_count: Optional[int] = Query(None, ge=0, description="Minimum estimated sold count (90 days)"),
-    max_sold_count: Optional[int] = Query(None, ge=0, description="Maximum estimated sold count (90 days)"),
-    
-    # Enhanced filters
-    authenticity_verification: Optional[bool] = Query(None, description="Items with authenticity guarantee"),
-    returns_accepted: Optional[bool] = Query(None, description="Items with returns accepted"),
-    free_shipping: Optional[bool] = Query(None, description="Items with free shipping"),
-    business_seller: Optional[bool] = Query(None, description="Items from business sellers only"),
-    top_rated_seller: Optional[bool] = Query(None, description="Items from top-rated sellers only"),
-    buy_it_now_only: Optional[bool] = Query(None, description="Buy It Now listings only"),
-    auction_only: Optional[bool] = Query(None, description="Auction listings only"),
-    
+    keyword: str = Query(..., min_length=1, max_length=200, description="Search keyword"),
+    limit: int = Query(50, ge=1, le=200, description="Number of results to return"),
+    min_price: Optional[float] = Query(None, ge=0, description="Minimum price filter"),
+    max_price: Optional[float] = Query(None, ge=0, description="Maximum price filter"),
+    condition: Optional[ItemCondition] = Query(None, description="Item condition filter"),
+    sort: SortOrder = Query(SortOrder.BEST_MATCH, description="Sort order"),
+    category_ids: Optional[str] = Query(None, description="Comma-separated category IDs"),
+    buy_it_now_only: bool = Query(False, description="Show only Buy It Now items"),
+    free_shipping_only: bool = Query(False, description="Show only items with free shipping"),
+    marketplace: str = Query("EBAY_US", description="eBay marketplace"),
+    top_rated_sellers_only: bool = Query(False, description="Show only top-rated sellers"),
     # Location filters
     item_location_country: Optional[str] = Query(None, description="Item location country (e.g., US, GB, DE)"),
-    ships_to_country: Optional[str] = Query(None, description="Ships to specific country"),
-    
-    # Advanced filters
-    listing_type: Optional[str] = Query(None, description="Listing type: All, Auction, FixedPrice"),
-    local_pickup: Optional[bool] = Query(None, description="Local pickup available"),
-    accepts_offers: Optional[bool] = Query(None, description="Accepts best offers"),
-):
+    # Enhanced search modes
+    search_mode: str = Query("enhanced", description="Search mode - 'enhanced', 'exact', 'broad'")
+) -> Dict[str, Any]:
     """
-    🔥 Enhanced eBay Product Search with Comprehensive Filters
-    
-    Supports multi-word search optimization, estimated sold count data,
-    watch count estimation, and 15+ advanced filters for dropshipping research.
+    Clean and simple eBay product search with essential filtering options.
     """
     try:
-        logger.info(f"Search request: query='{q}', mode={search_mode}, filters_count={sum(1 for f in [min_price, max_price, condition, min_feedback_score, authenticity_verification, returns_accepted, free_shipping, business_seller] if f is not None)}")
+        # Process keywords based on search mode
+        if search_mode == "exact":
+            processed_keyword = f'"{keyword}"'
+        elif search_mode == "broad":
+            processed_keyword = keyword
+        else:  # enhanced mode
+            processed_keyword = prepare_search_keywords(keyword)
         
-        # Optimize search query
-        optimized_query = optimize_search_query(q, search_mode)
-        logger.info(f"Query optimized: '{q}' -> '{optimized_query}'")
+        logger.info(f"Search request - Original: '{keyword}' -> Processed: '{processed_keyword}'")
         
-        # Build search parameters
-        search_params = {
-            "q": optimized_query,
-            "limit": min(limit, 200),
-            "offset": offset,
-        }
+        # Build eBay API compatible filters
+        filters = []
         
-        # Add category filter
-        if category_ids:
-            search_params["category_ids"] = category_ids
+        # Price filters
+        if min_price is not None and max_price is not None:
+            filters.append(f"price:[{min_price}..{max_price}]")
+        elif min_price is not None:
+            filters.append(f"price:[{min_price}..]")
+        elif max_price is not None:
+            filters.append(f"price:[..{max_price}]")
         
-        # Add price filters
-        price_filters = []
-        if min_price is not None:
-            price_filters.append(f"price:[{min_price}..")
-        if max_price is not None:
-            if price_filters:
-                price_filters[0] = price_filters[0].rstrip("..") + f"..{max_price}]"
-            else:
-                price_filters.append(f"price:[..{max_price}]")
-        
-        # Add condition filter
-        condition_filters = []
+        # Condition filter
         if condition:
-            condition_filters.append(f"condition:{condition}")
+            filters.append(f"conditionIds:{{{condition.value}}}")
         
-        # Add seller feedback filter
-        feedback_filters = []
-        if min_feedback_score is not None:
-            feedback_filters.append(f"sellerFeedbackScore:[{min_feedback_score}..")
-        if max_feedback_score is not None:
-            if feedback_filters:
-                feedback_filters[0] = feedback_filters[0].rstrip("..") + f"..{max_feedback_score}]"
-            else:
-                feedback_filters.append(f"sellerFeedbackScore:[..{max_feedback_score}]")
+        # Delivery options
+        if free_shipping_only:
+            filters.append("deliveryOptions:{FreeShipping}")
         
-        # Add boolean filters
-        boolean_filters = []
-        if authenticity_verification:
-            boolean_filters.append("qualifiedPrograms:AUTHENTICITY_GUARANTEE")
-        if returns_accepted:
-            boolean_filters.append("returnsAccepted:true")
-        if free_shipping:
-            boolean_filters.append("deliveryOptions:FREE_SHIPPING")
-        if business_seller:
-            boolean_filters.append("sellerAccountType:BUSINESS")
+        # Buying options
         if buy_it_now_only:
-            boolean_filters.append("buyingOptions:FIXED_PRICE")
-        if auction_only:
-            boolean_filters.append("buyingOptions:AUCTION")
-        if local_pickup:
-            boolean_filters.append("deliveryOptions:LOCAL_PICKUP")
-        if accepts_offers:
-            boolean_filters.append("buyingOptions:BEST_OFFER")
+            filters.append("buyingOptions:{FIXED_PRICE}")
         
-        # Add location filters
-        location_filters = []
+        # Seller filters
+        if top_rated_sellers_only:
+            filters.append("sellerTypes:{TopRated}")
+            
+        # Location filter
         if item_location_country:
-            location_filters.append(f"itemLocationCountry:{item_location_country}")
+            filters.append(f"itemLocationCountry:{item_location_country}")
         
-        # Combine all filters
-        all_filters = price_filters + condition_filters + feedback_filters + boolean_filters + location_filters
-        if all_filters:
-            search_params["filter"] = ",".join(all_filters)
-        
-        # Add sort parameter
-        if sort != SortOrder.BEST_MATCH:
-            search_params["sort"] = sort.value
-        
-        logger.info(f"eBay API call with params: {search_params}")
+        # Parse category IDs
+        category_list = None
+        if category_ids:
+            category_list = [cat.strip() for cat in category_ids.split(",")]
         
         # Call eBay Browse API
-        ebay_response = await ebay_client.search_items(**search_params)
+        params = {
+            "q": processed_keyword,
+            "limit": limit,
+            "sort": sort.value,
+            "fieldgroups": "MATCHING_ITEMS,EXTENDED"
+        }
         
-        if not ebay_response or 'itemSummaries' not in ebay_response:
-            logger.warning("No results from eBay API")
-            return {
-                "items": [],
-                "total": 0,
-                "search_info": {
-                    "query": q,
-                    "optimized_query": optimized_query,
-                    "search_mode": search_mode,
-                    "filters_applied": len(all_filters),
-                    "message": "No results found for your search criteria"
-                }
-            }
+        # Add filters if any
+        if filters:
+            params["filter"] = ",".join(filters)
         
-        # Process results with enhanced data
-        processed_items = []
-        for item in ebay_response.get('itemSummaries', []):
-            # Estimate watch count and sold count
-            estimated_watch_count = estimate_watch_count(item)
-            estimated_sold_data = estimate_sold_count(item)
-            
-            # Apply watch count filters
-            if min_watch_count is not None and estimated_watch_count < min_watch_count:
+        # Add category IDs
+        if category_list:
+            params["category_ids"] = ",".join(category_list)
+        
+        # Set marketplace headers
+        headers = {
+            "X-EBAY-C-MARKETPLACE-ID": marketplace,
+            "X-EBAY-C-ENDUSERCTX": f"contextualLocation=country={marketplace.split('_')[1]}"
+        }
+        
+        # Use the ebay_client to search for products
+        results = await ebay_client.call_api(
+            method='GET',
+            endpoint='/buy/browse/v1/item_summary/search',
+            params=params,
+            headers=headers
+        )
+        
+        # Process the results
+        processed_results = process_ebay_results(results, marketplace)
+        
+        # Apply additional filters
+        filtered_items = []
+        for item in processed_results.get("items", []):
+            # Check price range (double-check)
+            price_value = float(item.get("price", {}).get("value", 0))
+            if min_price is not None and price_value < min_price:
                 continue
-            if max_watch_count is not None and estimated_watch_count > max_watch_count:
+            if max_price is not None and price_value > max_price:
                 continue
             
-            # Apply sold count filters  
-            if min_sold_count is not None and estimated_sold_data["total_sold_90_days"] < min_sold_count:
-                continue
-            if max_sold_count is not None and estimated_sold_data["total_sold_90_days"] > max_sold_count:
-                continue
+            # Check free shipping
+            if free_shipping_only:
+                shipping_options = item.get("shippingOptions", [])
+                has_free_shipping = any(
+                    float(option.get("shippingCost", {}).get("value", 0)) == 0 
+                    for option in shipping_options
+                )
+                if not has_free_shipping:
+                    continue
             
-            # Enhanced item data
-            enhanced_item = {
-                **item,
-                "watch_count": estimated_watch_count,
-                "sold_data": estimated_sold_data,
-                "dropshipping_insights": {
-                    "demand_score": calculate_demand_score(estimated_sold_data, estimated_watch_count),
-                    "competition_level": assess_competition_level(item),
-                    "profit_potential": assess_profit_potential(item),
-                    "shipping_score": assess_shipping_score(item),
-                    "seller_reliability": assess_seller_reliability(item)
-                }
-            }
+            # Check top rated seller
+            if top_rated_sellers_only:
+                seller = item.get("seller", {})
+                if not seller.get("topRatedSeller", False):
+                    continue
             
-            processed_items.append(enhanced_item)
+            filtered_items.append(item)
         
-        # Sort by custom criteria if needed
-        if min_watch_count or min_sold_count:
-            processed_items.sort(key=lambda x: (x["sold_data"]["total_sold_90_days"], x["watch_count"]), reverse=True)
+        # Create search metadata
+        search_metadata = {
+            "keyword": keyword,
+            "processed_keyword": processed_keyword,
+            "search_mode": search_mode,
+            "marketplace": marketplace,
+            "filters_applied": {
+                "price_range": {"min": min_price, "max": max_price},
+                "condition": condition.value if condition else None,
+                "free_shipping_only": free_shipping_only,
+                "buy_it_now_only": buy_it_now_only,
+                "top_rated_sellers_only": top_rated_sellers_only,
+                "item_location_country": item_location_country
+            },
+            "sort_order": sort.value,
+            "results_count": len(filtered_items),
+            "total_available": results.get("total", 0)
+        }
         
-        logger.info(f"Processed {len(processed_items)} items with enhanced data")
-        
+        # Return clean results
         return {
-            "items": processed_items,
-            "total": len(processed_items),
-            "search_info": {
-                "query": q,
-                "optimized_query": optimized_query,
-                "search_mode": search_mode,
-                "filters_applied": len(all_filters),
-                "data_enhancement": {
-                    "watch_count_estimation": "ALGORITHMIC",
-                    "sold_count_estimation": "ALGORITHMIC", 
-                    "dropshipping_insights": "ENABLED"
-                }
-            }
+            "success": True,
+            "results": filtered_items,
+            "total_found": len(filtered_items),
+            "search_metadata": search_metadata
         }
         
     except EbayAPIError as e:
-        logger.error(f"eBay API error: {e}")
-        raise HTTPException(status_code=500, detail=f"eBay API error: {str(e)}")
+        logger.error(f"Caught EbayAPIError in search_products: {e.message}")
+        raise HTTPException(
+            status_code=e.status_code or 500,
+            detail={"error": "eBay API Error", "message": e.message}
+        )
     except Exception as e:
-        logger.error(f"Search error: {e}")
-        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+        logger.error(f"Unexpected error in search_products: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
 
-def calculate_demand_score(sold_data: Dict[str, Any], watch_count: int) -> int:
-    """Calculate demand score from 1-100 based on sold count and watch count"""
-    sold_count = sold_data.get("total_sold_90_days", 0)
+def process_ebay_results(ebay_response: Dict[str, Any], marketplace: str) -> Dict[str, Any]:
+    """
+    Process eBay API response and extract essential product information.
+    """
+    items = []
     
-    # Base score from sold count
-    if sold_count >= 100:
-        sold_score = 90
-    elif sold_count >= 50:
-        sold_score = 75
-    elif sold_count >= 20:
-        sold_score = 60
-    elif sold_count >= 10:
-        sold_score = 45
-    elif sold_count >= 5:
-        sold_score = 30
-    else:
-        sold_score = 10
-    
-    # Watch count contribution
-    if watch_count >= 50:
-        watch_score = 10
-    elif watch_count >= 20:
-        watch_score = 7
-    elif watch_count >= 10:
-        watch_score = 5
-    else:
-        watch_score = 2
-    
-    return min(sold_score + watch_score, 100)
-
-def assess_competition_level(item: Dict[str, Any]) -> str:
-    """Assess competition level based on various factors"""
-    # Check if it's a popular brand/category
-    title = item.get('title', '').lower()
-    
-    popular_brands = ['apple', 'samsung', 'nike', 'adidas', 'sony', 'gucci', 'louis vuitton']
-    if any(brand in title for brand in popular_brands):
-        return "HIGH"
-    
-    # Check seller count (simulated based on category popularity)
-    category_id = item.get('categories', [{}])[0].get('categoryId', '')
-    competitive_categories = ['9355', '58058', '11450']  # Electronics, computers, clothing
-    
-    if category_id in competitive_categories:
-        return "HIGH"
-    
-    return random.choice(["LOW", "MEDIUM", "HIGH"])
-
-def assess_profit_potential(item: Dict[str, Any]) -> str:
-    """Assess profit potential based on price and category"""
-    try:
-        price = float(item.get('price', {}).get('value', 0))
+    for item in ebay_response.get("itemSummaries", []):
+        item_id = item.get("itemId")
         
-        if price >= 100:
-            return "HIGH"
-        elif price >= 50:
-            return "MEDIUM"
-        elif price >= 20:
-            return "LOW"
-        else:
-            return "VERY_LOW"
-    except (ValueError, TypeError):
+        # Extract clean, essential data
+        processed_item = {
+            "item_id": item_id,
+            "title": item.get("title"),
+            "price": item.get("price", {}),
+            "condition": item.get("condition"),
+            "condition_id": item.get("conditionId"),
+            
+            # Item links
+            "item_web_url": item.get("itemWebUrl"),
+            "view_item_url": item.get("itemWebUrl"),
+            
+            # Images
+            "image_url": item.get("image", {}).get("imageUrl"),
+            "thumbnail_images": item.get("thumbnailImages", []),
+            
+            # Category info
+            "categories": item.get("categories", []),
+            "primary_category": item.get("categories", [{}])[0] if item.get("categories") else {},
+            
+            # Shipping info
+            "shipping_options": item.get("shippingOptions", []),
+            "free_shipping": any(
+                option.get("shippingCost", {}).get("value") == "0.0" 
+                for option in item.get("shippingOptions", [])
+            ),
+            
+            # Seller information
+            "seller": {
+                "username": item.get("seller", {}).get("username"),
+                "feedback_score": item.get("seller", {}).get("feedbackScore", 0),
+                "feedback_percentage": item.get("seller", {}).get("feedbackPercentage"),
+                "top_rated_seller": item.get("seller", {}).get("topRatedSeller", False),
+                "business_seller": item.get("seller", {}).get("sellerAccountType") == "BUSINESS"
+            },
+            
+            # Listing details
+            "buying_options": item.get("buyingOptions", []),
+            "listing_type": determine_listing_type(item.get("buyingOptions", [])),
+            
+            # Additional metadata
+            "returns_accepted": item.get("returnsAccepted", False),
+            "top_rated_buying_experience": item.get("topRatedBuyingExperience", False),
+            "item_location": item.get("itemLocation", {}),
+            "listing_end_date": item.get("listingEndDate"),
+            
+            # Simple market insights
+            "market_insights": extract_basic_market_insights(item)
+        }
+        
+        items.append(processed_item)
+    
+    return {
+        "items": items,
+        "total_found": len(items),
+        "marketplace": marketplace
+    }
+
+def determine_listing_type(buying_options: List[str]) -> str:
+    """Determine listing type from buying options."""
+    if "AUCTION" in buying_options:
+        return "AUCTION"
+    elif "FIXED_PRICE" in buying_options or "BUY_IT_NOW" in buying_options:
+        return "BUY_IT_NOW"
+    else:
         return "UNKNOWN"
 
-def assess_shipping_score(item: Dict[str, Any]) -> int:
-    """Score shipping options from 1-10"""
-    score = 5  # Base score
+def extract_basic_market_insights(item: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract basic market insights from eBay data."""
+    insights = {}
     
-    shipping_options = item.get('shippingOptions', [])
-    for option in shipping_options:
-        # Free shipping bonus
-        if option.get('shippingCost', {}).get('value', '0') == '0':
-            score += 3
-        
-        # Fast shipping bonus
-        max_delivery_days = option.get('maxEstimatedDeliveryDate')
-        if max_delivery_days and 'days' in str(max_delivery_days):
-            try:
-                days = int(''.join(filter(str.isdigit, str(max_delivery_days))))
-                if days <= 3:
-                    score += 2
-                elif days <= 7:
-                    score += 1
-            except (ValueError, TypeError):
-                pass
+    # Price analysis
+    price_info = item.get("price", {})
+    if price_info:
+        insights["price_value"] = price_info.get("value")
+        insights["price_currency"] = price_info.get("currency")
     
-    return min(score, 10)
+    # Basic listing quality indicators
+    insights["listing_quality"] = {
+        "top_rated_buying_experience": item.get("topRatedBuyingExperience", False),
+        "priority_listing": item.get("priorityListing", False),
+        "has_multiple_images": len(item.get("thumbnailImages", [])) > 1,
+        "shipping_options_count": len(item.get("shippingOptions", [])),
+        "returns_accepted": item.get("returnsAccepted", False)
+    }
+    
+    # Basic market positioning
+    insights["market_position"] = {
+        "listing_type": determine_listing_type(item.get("buyingOptions", [])),
+        "has_free_shipping": any(
+            option.get("shippingCost", {}).get("value") == "0.0" 
+            for option in item.get("shippingOptions", [])
+        ),
+        "has_coupons": item.get("availableCoupons", False)
+    }
+    
+    return insights
 
-def assess_seller_reliability(item: Dict[str, Any]) -> str:
-    """Assess seller reliability based on feedback"""
-    try:
-        feedback_score = int(item.get('seller', {}).get('feedbackScore', 0))
-        feedback_percentage = float(item.get('seller', {}).get('feedbackPercentage', 98))
-        
-        if feedback_score >= 10000 and feedback_percentage >= 99:
-            return "EXCELLENT"
-        elif feedback_score >= 1000 and feedback_percentage >= 98:
-            return "GOOD"
-        elif feedback_score >= 100 and feedback_percentage >= 95:
-            return "FAIR"
-        else:
-            return "POOR"
-    except (ValueError, TypeError):
-        return "UNKNOWN"
+@router.get("/categories")
+async def get_popular_categories() -> Dict[str, Any]:
+    """Get popular eBay categories for filtering."""
+    return {
+        "popular_categories": {
+            "Electronics": {
+                "category_id": "58058",
+                "subcategories": {
+                    "Cell Phones & Accessories": "15032",
+                    "Computers & Tablets": "58058", 
+                    "Consumer Electronics": "293",
+                    "Video Games": "1249"
+                }
+            },
+            "Fashion": {
+                "category_id": "11450",
+                "subcategories": {
+                    "Men's Clothing": "1059",
+                    "Women's Clothing": "15724",
+                    "Shoes": "93427",
+                    "Jewelry": "281"
+                }
+            },
+            "Home & Garden": {
+                "category_id": "11700",
+                "subcategories": {
+                    "Home Décor": "20081",
+                    "Kitchen & Dining": "20625",
+                    "Tools & Hardware": "631",
+                    "Garden & Patio": "159912"
+                }
+            },
+            "Sports & Outdoors": {
+                "category_id": "888",
+                "subcategories": {
+                    "Fitness Equipment": "15273",
+                    "Outdoor Sports": "159043",
+                    "Team Sports": "64482"
+                }
+            },
+            "Automotive": {
+                "category_id": "6000",
+                "subcategories": {
+                    "Parts & Accessories": "6030",
+                    "Motorcycles": "6024",
+                    "Boats": "26429"
+                }
+            }
+        },
+        "note": "Use these category IDs in the category_ids parameter to filter search results."
+    }
