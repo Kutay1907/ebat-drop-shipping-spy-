@@ -82,6 +82,11 @@ async def search_products(
     Clean and simple eBay product search with essential filtering options.
     """
     try:
+        logger.info(
+            f"Search triggered with Keyword: '{keyword}', Limit: {limit}, "
+            f"Feedback Range: {min_seller_feedback}-{max_seller_feedback}"
+        )
+        
         # Process keywords based on search mode
         if search_mode == "exact":
             processed_keyword = f'"{keyword}"'
@@ -89,8 +94,6 @@ async def search_products(
             processed_keyword = keyword
         else:  # enhanced mode
             processed_keyword = prepare_search_keywords(keyword)
-        
-        logger.info(f"Search request - Original: '{keyword}' -> Processed: '{processed_keyword}'")
         
         # Build eBay API compatible filters
         filters = []
@@ -123,7 +126,7 @@ async def search_products(
         if buy_it_now_only:
             filters.append("buyingOptions:{FIXED_PRICE}")
         
-        # Seller filters
+        # Seller filters (only those supported by API)
         if top_rated_sellers_only:
             filters.append("sellerTypes:{TopRated}")
             
@@ -135,11 +138,19 @@ async def search_products(
         category_list = None
         if category_ids:
             category_list = [cat.strip() for cat in category_ids.split(",")]
-        
+
+        # If post-search filters are active, fetch a larger pool of items.
+        user_requested_limit = limit
+        api_limit = limit
+        post_filters_active = min_seller_feedback is not None or max_seller_feedback is not None
+        if post_filters_active:
+            api_limit = 200  # Max limit for eBay Browse API
+            logger.info(f"Feedback filter active. Increasing API limit to {api_limit} to find matches.")
+
         # Call eBay Browse API
         params = {
             "q": processed_keyword,
-            "limit": limit,
+            "limit": api_limit,
             "sort": sort.value,
             "fieldgroups": "MATCHING_ITEMS,EXTENDED"
         }
@@ -158,7 +169,7 @@ async def search_products(
             "X-EBAY-C-ENDUSERCTX": f"contextualLocation=country={marketplace.split('_')[1]}"
         }
         
-        # Use the ebay_client to search for products
+        logger.info(f"Calling eBay API with params: {params}")
         results = await ebay_client.call_api(
             method='GET',
             endpoint='/buy/browse/v1/item_summary/search',
@@ -168,53 +179,40 @@ async def search_products(
         
         # Process the results
         processed_results = process_ebay_results(results, marketplace)
+        logger.info(f"Received {len(processed_results.get('items', []))} items from eBay.")
         
-        # Apply additional filters
-        filtered_items = []
+        # Apply post-search filters (for criteria not supported by eBay's API filter)
+        final_items = []
         for item in processed_results.get("items", []):
-            # Check price range (double-check)
+            # Price range check (as a safeguard)
             try:
                 price_value = float(item.get("price", {}).get("value", 0))
                 if not is_price_in_range(price_value):
                     continue
             except (ValueError, TypeError):
-                # Skip items with invalid price
                 continue
-            
-            # Check free shipping
-            if free_shipping_only:
-                shipping_options = item.get("shippingOptions", [])
-                has_free_shipping = any(
-                    float(option.get("shippingCost", {}).get("value", 0)) == 0 
-                    for option in shipping_options
-                )
-                if not has_free_shipping:
+
+            # Seller feedback score filter
+            if min_seller_feedback is not None or max_seller_feedback is not None:
+                try:
+                    seller_feedback = int(item.get("seller", {}).get("feedback_score", 0))
+                    if min_seller_feedback is not None and seller_feedback < min_seller_feedback:
+                        continue
+                    if max_seller_feedback is not None and seller_feedback > max_seller_feedback:
+                        continue
+                except (ValueError, TypeError):
+                    # If feedback score is invalid, it cannot match the filter
                     continue
             
-            # Check top rated seller and feedback score
-            seller = item.get("seller", {})
-            if top_rated_sellers_only and not seller.get("topRatedSeller", False):
-                continue
-            
-            # Get seller feedback score and apply filters
-            try:
-                seller_feedback = int(seller.get("feedbackScore", 0))
-                
-                # Check minimum feedback score
-                if min_seller_feedback is not None and seller_feedback < min_seller_feedback:
-                    continue
-                    
-                # Check maximum feedback score
-                if max_seller_feedback is not None and seller_feedback > max_seller_feedback:
-                    continue
-                    
-            except (ValueError, TypeError):
-                # If feedback score is not a valid number, skip if a filter is active
-                if min_seller_feedback is not None or max_seller_feedback is not None:
-                    continue
-            
-            filtered_items.append(item)
+            final_items.append(item)
         
+        logger.info(f"Found {len(final_items)} items after applying all filters.")
+
+        # Truncate results to the user's originally requested limit
+        if len(final_items) > user_requested_limit:
+            final_items = final_items[:user_requested_limit]
+            logger.info(f"Truncating results to user's limit of {user_requested_limit}.")
+
         # Create search metadata
         search_metadata = {
             "keyword": keyword,
@@ -235,15 +233,15 @@ async def search_products(
                 "results_limit": limit
             },
             "sort_order": sort.value,
-            "results_count": len(filtered_items),
+            "results_count": len(final_items),
             "total_available": results.get("total", 0)
         }
         
         # Return clean results
         return {
             "success": True,
-            "results": filtered_items,
-            "total_found": len(filtered_items),
+            "results": final_items,
+            "total_found": len(final_items),
             "search_metadata": search_metadata
         }
         
