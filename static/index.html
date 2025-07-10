@@ -359,6 +359,7 @@
             overflow: hidden;
             transition: all 0.3s ease;
             cursor: pointer;
+            position: relative; /* Added for favorite button positioning */
         }
 
         .product-card:hover {
@@ -566,6 +567,32 @@
             }
         }
 
+        .favorite-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: #d1d5db; /* Default color for non-favorite */
+            transition: all 0.3s ease;
+        }
+
+        .favorite-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .favorite-btn.is-favorite {
+            color: #f59e0b; /* Gold color for favorite */
+        }
+
         /* Utility Classes */
         .hidden {
             display: none !important;
@@ -597,206 +624,220 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <div class="header">
+    <header class="header">
         <div class="header-content">
-            <a href="#" class="logo">
+            <a href="/" class="logo">
                 <i class="fas fa-search-dollar"></i>
-                DropSpy Pro
+                eBay Spy
             </a>
-            <div class="nav-links">
-                <a href="#" class="nav-link">Dashboard</a>
-                <a href="#" class="nav-link">Products</a>
-                <a href="#" class="nav-link">Analytics</a>
-                <a href="#" class="nav-link">Settings</a>
-                <span class="premium-badge">
-                    <i class="fas fa-crown"></i> Premium
-                </span>
-            </div>
+            <nav class="nav-links">
+                <a href="#" class="nav-link" id="show-search-view">Search</a>
+                <a href="#" class="nav-link" id="show-favorites-view">Favorites</a>
+                <span class="premium-badge">Premium</span>
+            </nav>
         </div>
-    </div>
+    </header>
 
-    <!-- Main Container -->
     <div class="container">
-        <!-- Hero Section -->
-        <div class="hero">
-            <h1>Find Your Next Winning Product</h1>
-            <p>Discover profitable dropshipping opportunities with our advanced eBay product research tool</p>
-        </div>
+        <!-- Main Search View -->
+        <div id="search-view">
+            <div class="hero">
+                <h1>Find Your Next Winning Product</h1>
+                <p>Discover profitable dropshipping opportunities with our advanced eBay product research tool</p>
+            </div>
 
-        <!-- Search Section -->
-        <div class="search-card">
-            <form class="search-form" id="searchForm">
-                <div class="search-input-container">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="searchInput" class="search-input" 
-                           placeholder="Search for products (e.g., 'wireless earbuds', 'phone case')" 
-                           required>
+            <!-- Search Section -->
+            <div class="search-card">
+                <form class="search-form" id="searchForm">
+                    <div class="search-input-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="searchInput" class="search-input" 
+                               placeholder="Search for products (e.g., 'wireless earbuds', 'phone case')" 
+                               required>
+                    </div>
+                    <button type="submit" class="search-button" id="searchButton">
+                        <i class="fas fa-search"></i>
+                        Search Products
+                    </button>
+                </form>
+
+                <!-- Quick Filters -->
+                <div class="quick-filters">
+                    <div class="quick-filter" data-query="wireless earbuds">
+                        <i class="fas fa-headphones"></i> Wireless Earbuds
+                    </div>
+                    <div class="quick-filter" data-query="phone case">
+                        <i class="fas fa-mobile-alt"></i> Phone Cases
+                    </div>
+                    <div class="quick-filter" data-query="bluetooth speaker">
+                        <i class="fas fa-volume-up"></i> Bluetooth Speakers
+                    </div>
+                    <div class="quick-filter" data-query="fitness tracker">
+                        <i class="fas fa-heartbeat"></i> Fitness Trackers
+                    </div>
+                    <div class="quick-filter" data-query="laptop stand">
+                        <i class="fas fa-laptop"></i> Laptop Stands
+                    </div>
+                    <div class="quick-filter" data-query="coffee maker">
+                        <i class="fas fa-coffee"></i> Coffee Makers
+                    </div>
                 </div>
-                <button type="submit" class="search-button" id="searchButton">
+
+                <!-- Advanced Filters -->
+                <div class="filters-section">
+                    <div class="filters-toggle" onclick="toggleFilters()">
+                        <div class="filters-title">
+                            <i class="fas fa-sliders-h"></i>
+                            Advanced Filters
+                        </div>
+                        <i class="fas fa-chevron-down" id="filtersChevron"></i>
+                    </div>
+                    <div class="filters-grid hidden" id="filtersGrid">
+                        <div class="filter-group">
+                            <label for="minPrice">Min Price</label>
+                            <input type="number" id="minPrice" class="filter-input" placeholder="0.00" min="0" step="0.01">
+                        </div>
+                        <div class="filter-group">
+                            <label for="maxPrice">Max Price</label>
+                            <input type="number" id="maxPrice" class="filter-input" placeholder="0.00" min="0" step="0.01">
+                        </div>
+                        <div class="filter-group">
+                            <label for="condition">Condition</label>
+                            <select id="condition" class="filter-select">
+                                <option value="">Any Condition</option>
+                                <option value="1000">New</option>
+                                <option value="3000">Used</option>
+                                <option value="2000">Certified Refurbished</option>
+                                <option value="2500">Seller Refurbished</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="sortOrder">Sort By</label>
+                            <select id="sortOrder" class="filter-select">
+                                <option value="bestMatch">Best Match</option>
+                                <option value="newlyListed">Newest Listed</option>
+                                <option value="price">Price: Low to High</option>
+                                <option value="-price">Price: High to Low</option>
+                                <option value="endingSoonest">Ending Soon</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="resultsLimit">Results Per Search</label>
+                            <select id="resultsLimit" class="filter-select">
+                                <option value="20">20 Results</option>
+                                <option value="50" selected>50 Results</option>
+                                <option value="100">100 Results</option>
+                                <option value="200">200 Results</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="minSellerFeedback">Min. Seller Feedback</label>
+                            <input type="number" id="minSellerFeedback" class="filter-input" 
+                                   placeholder="e.g., 1000" min="0" step="1"
+                                   oninput="validateFeedbackInputs()">
+                        </div>
+                        <div class="filter-group">
+                            <label for="maxSellerFeedback">Max. Seller Feedback</label>
+                            <input type="number" id="maxSellerFeedback" class="filter-input" 
+                                   placeholder="e.g., 100000" min="0" step="1"
+                                   oninput="validateFeedbackInputs()">
+                        </div>
+                        <div class="filter-group">
+                            <label for="location">Item Location</label>
+                            <select id="location" class="filter-select">
+                                <option value="">Any Location</option>
+                                <option value="US">United States</option>
+                                <option value="GB">United Kingdom</option>
+                                <option value="DE">Germany</option>
+                                <option value="CA">Canada</option>
+                                <option value="AU">Australia</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Additional Filters</label>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="freeShipping">
+                                <label for="freeShipping">Free Shipping Only</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="buyItNow">
+                                <label for="buyItNow">Buy It Now Only</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="topRated">
+                                <label for="topRated">Top Rated Sellers</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section hidden" id="resultsSection">
+                <div class="results-header">
+                    <div>
+                        <h2 class="results-title">Search Results</h2>
+                        <div class="results-meta" id="resultsMeta">
+                            Found 0 products
+                        </div>
+                    </div>
+                    <div class="sort-controls">
+                        <label for="resultsSort">Sort:</label>
+                        <select id="resultsSort" class="sort-select">
+                            <option value="relevance">Relevance</option>
+                            <option value="price_low">Price: Low to High</option>
+                            <option value="price_high">Price: High to Low</option>
+                            <option value="newest">Newest First</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div class="loading hidden" id="loadingState">
+                    <div class="spinner"></div>
+                    <p>Searching for products...</p>
+                </div>
+
+                <!-- Products Grid -->
+                <div class="products-grid" id="productsGrid">
+                    <!-- Products will be inserted here -->
+                </div>
+
+                <!-- Empty State -->
+                <div class="empty-state hidden" id="emptyState">
                     <i class="fas fa-search"></i>
-                    Search Products
-                </button>
-            </form>
-
-            <!-- Quick Filters -->
-            <div class="quick-filters">
-                <div class="quick-filter" data-query="wireless earbuds">
-                    <i class="fas fa-headphones"></i> Wireless Earbuds
-                </div>
-                <div class="quick-filter" data-query="phone case">
-                    <i class="fas fa-mobile-alt"></i> Phone Cases
-                </div>
-                <div class="quick-filter" data-query="bluetooth speaker">
-                    <i class="fas fa-volume-up"></i> Bluetooth Speakers
-                </div>
-                <div class="quick-filter" data-query="fitness tracker">
-                    <i class="fas fa-heartbeat"></i> Fitness Trackers
-                </div>
-                <div class="quick-filter" data-query="laptop stand">
-                    <i class="fas fa-laptop"></i> Laptop Stands
-                </div>
-                <div class="quick-filter" data-query="coffee maker">
-                    <i class="fas fa-coffee"></i> Coffee Makers
-                </div>
-            </div>
-
-            <!-- Advanced Filters -->
-            <div class="filters-section">
-                <div class="filters-toggle" onclick="toggleFilters()">
-                    <div class="filters-title">
-                        <i class="fas fa-sliders-h"></i>
-                        Advanced Filters
-                    </div>
-                    <i class="fas fa-chevron-down" id="filtersChevron"></i>
-                </div>
-                <div class="filters-grid hidden" id="filtersGrid">
-                    <div class="filter-group">
-                        <label for="minPrice">Min Price</label>
-                        <input type="number" id="minPrice" class="filter-input" placeholder="0.00" min="0" step="0.01">
-                    </div>
-                    <div class="filter-group">
-                        <label for="maxPrice">Max Price</label>
-                        <input type="number" id="maxPrice" class="filter-input" placeholder="0.00" min="0" step="0.01">
-                    </div>
-                    <div class="filter-group">
-                        <label for="condition">Condition</label>
-                        <select id="condition" class="filter-select">
-                            <option value="">Any Condition</option>
-                            <option value="1000">New</option>
-                            <option value="3000">Used</option>
-                            <option value="2000">Certified Refurbished</option>
-                            <option value="2500">Seller Refurbished</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="sortOrder">Sort By</label>
-                        <select id="sortOrder" class="filter-select">
-                            <option value="bestMatch">Best Match</option>
-                            <option value="newlyListed">Newest Listed</option>
-                            <option value="price">Price: Low to High</option>
-                            <option value="-price">Price: High to Low</option>
-                            <option value="endingSoonest">Ending Soon</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="resultsLimit">Results Per Search</label>
-                        <select id="resultsLimit" class="filter-select">
-                            <option value="20">20 Results</option>
-                            <option value="50" selected>50 Results</option>
-                            <option value="100">100 Results</option>
-                            <option value="200">200 Results</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="minSellerFeedback">Min. Seller Feedback</label>
-                        <input type="number" id="minSellerFeedback" class="filter-input" 
-                               placeholder="e.g., 1000" min="0" step="1"
-                               oninput="validateFeedbackInputs()">
-                    </div>
-                    <div class="filter-group">
-                        <label for="maxSellerFeedback">Max. Seller Feedback</label>
-                        <input type="number" id="maxSellerFeedback" class="filter-input" 
-                               placeholder="e.g., 100000" min="0" step="1"
-                               oninput="validateFeedbackInputs()">
-                    </div>
-                    <div class="filter-group">
-                        <label for="location">Item Location</label>
-                        <select id="location" class="filter-select">
-                            <option value="">Any Location</option>
-                            <option value="US">United States</option>
-                            <option value="GB">United Kingdom</option>
-                            <option value="DE">Germany</option>
-                            <option value="CA">Canada</option>
-                            <option value="AU">Australia</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Additional Filters</label>
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="freeShipping">
-                            <label for="freeShipping">Free Shipping Only</label>
-                        </div>
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="buyItNow">
-                            <label for="buyItNow">Buy It Now Only</label>
-                        </div>
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="topRated">
-                            <label for="topRated">Top Rated Sellers</label>
-                        </div>
+                    <h3>No products found</h3>
+                    <p>Try adjusting your search terms or filters.</p>
+                    <div class="filter-notice hidden" id="filterNotice">
+                        <strong>Note:</strong> Filters like seller feedback are applied to the initial search results. If you get no results, try increasing the "Results Per Search" limit to find matching products.
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Results Section -->
-        <div class="results-section hidden" id="resultsSection">
+        <!-- Favorites View -->
+        <div id="favorites-view" class="hidden">
             <div class="results-header">
-                <div>
-                    <h2 class="results-title">Search Results</h2>
-                    <div class="results-meta" id="resultsMeta">
-                        Found 0 products
-                    </div>
-                </div>
-                <div class="sort-controls">
-                    <label for="resultsSort">Sort:</label>
-                    <select id="resultsSort" class="sort-select">
-                        <option value="relevance">Relevance</option>
-                        <option value="price_low">Price: Low to High</option>
-                        <option value="price_high">Price: High to Low</option>
-                        <option value="newest">Newest First</option>
-                    </select>
+                <h2 class="results-title">Your Favorite Items</h2>
+                <div class="results-meta" id="favoritesMeta">
+                    You have 0 favorite items.
                 </div>
             </div>
-
-            <!-- Loading State -->
-            <div class="loading hidden" id="loadingState">
-                <div class="spinner"></div>
-                <p>Searching for products...</p>
+            <div class="products-grid" id="favoritesGrid">
+                <!-- Favorite products will be inserted here -->
             </div>
-
-            <!-- Products Grid -->
-            <div class="products-grid" id="productsGrid">
-                <!-- Products will be inserted here -->
-            </div>
-
-            <!-- Empty State -->
-            <div class="empty-state hidden" id="emptyState">
-                <i class="fas fa-search"></i>
-                <h3>No products found</h3>
-                <p>Try adjusting your search terms or filters.</p>
-                <div class="filter-notice hidden" id="filterNotice">
-                    <strong>Note:</strong> Filters like seller feedback are applied to the initial search results. If you get no results, try increasing the "Results Per Search" limit to find matching products.
-                </div>
+            <div class="empty-state hidden" id="favoritesEmptyState">
+                <i class="fas fa-star"></i>
+                <h3>No Favorites Yet</h3>
+                <p>Click the star icon on a product to add it to your favorites.</p>
             </div>
         </div>
     </div>
 
     <script>
-        // Global variables
+        // Global state
         let searchResults = [];
-        let currentQuery = '';
+        let favorites = [];
         let isSearching = false;
 
         // DOM elements
@@ -808,12 +849,18 @@
         const productsGrid = document.getElementById('productsGrid');
         const emptyState = document.getElementById('emptyState');
         const resultsMeta = document.getElementById('resultsMeta');
-        const filtersGrid = document.getElementById('filtersGrid');
-        const filtersChevron = document.getElementById('filtersChevron');
+
+        const searchView = document.getElementById('search-view');
+        const favoritesView = document.getElementById('favorites-view');
+        const favoritesGrid = document.getElementById('favoritesGrid');
+        const favoritesMeta = document.getElementById('favoritesMeta');
+        const favoritesEmptyState = document.getElementById('favoritesEmptyState');
 
         // Event listeners
         searchForm.addEventListener('submit', handleSearch);
         document.getElementById('resultsSort').addEventListener('change', sortResults);
+        document.getElementById('show-search-view').addEventListener('click', () => showView('search'));
+        document.getElementById('show-favorites-view').addEventListener('click', () => showView('favorites'));
 
         // Quick filter buttons
         document.querySelectorAll('.quick-filter').forEach(button => {
@@ -961,6 +1008,9 @@
         function createProductCard(product) {
             const card = document.createElement('div');
             card.className = 'product-card';
+            card.dataset.itemId = product.item_id;
+
+            const isFav = isFavorite(product.item_id);
             
             const price = product.price?.value || '0.00';
             const currency = product.price?.currency || 'USD';
@@ -975,6 +1025,10 @@
             const ebayUrl = product.item_web_url || '#';
 
             card.innerHTML = `
+                <button class="favorite-btn ${isFav ? 'is-favorite' : ''}" 
+                        onclick="toggleFavorite(event, '${product.item_id}')">
+                    <i class="fas fa-star"></i>
+                </button>
                 <img src="${imageUrl}" alt="${title}" class="product-image" 
                      onerror="this.src='/static/placeholder.png'">
                 <div class="product-content">
@@ -1082,12 +1136,121 @@
             alert('Product analysis feature coming soon!');
         }
 
+        // Favorites Functions
+        async function fetchFavorites() {
+            try {
+                const response = await fetch('/api/favorites');
+                if (response.ok) {
+                    favorites = await response.json();
+                    updateFavoritesCount();
+                }
+            } catch (error) {
+                console.error("Failed to fetch favorites:", error);
+            }
+        }
+
+        async function addFavorite(item) {
+            try {
+                const response = await fetch('/api/favorites', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(item),
+                });
+                if (response.ok) {
+                    favorites.push(item);
+                    updateFavoritesCount();
+                    rerenderProductCard(item.item_id);
+                } else {
+                    console.error("Failed to add favorite:", await response.json());
+                }
+            } catch (error) {
+                console.error("Error adding favorite:", error);
+            }
+        }
+
+        async function removeFavorite(itemId) {
+            try {
+                const response = await fetch(`/api/favorites/${itemId}`, { method: 'DELETE' });
+                if (response.ok) {
+                    favorites = favorites.filter(fav => fav.item_id !== itemId);
+                    updateFavoritesCount();
+                    rerenderProductCard(itemId);
+                    // If in favorites view, remove the card directly
+                    if (!favoritesView.classList.contains('hidden')) {
+                        const cardToRemove = document.querySelector(`#favoritesGrid .product-card[data-item-id="${itemId}"]`);
+                        if (cardToRemove) cardToRemove.remove();
+                        if (favorites.length === 0) showFavoritesEmptyState();
+                    }
+                } else {
+                    console.error("Failed to remove favorite:", await response.json());
+                }
+            } catch (error)
+                {
+                console.error("Error removing favorite:", error);
+            }
+        }
+
+        function isFavorite(itemId) {
+            return favorites.some(fav => fav.item_id === itemId);
+        }
+
+        function updateFavoritesCount() {
+            favoritesMeta.textContent = `You have ${favorites.length} favorite items.`;
+        }
+
+        function displayFavorites() {
+            if (favorites.length === 0) {
+                showFavoritesEmptyState();
+            } else {
+                hideFavoritesEmptyState();
+                favoritesGrid.innerHTML = '';
+                favorites.forEach(product => {
+                    const productCard = createProductCard(product);
+                    favoritesGrid.appendChild(productCard);
+                });
+            }
+        }
+
+        function showFavoritesEmptyState() {
+            favoritesGrid.innerHTML = '';
+            favoritesEmptyState.classList.remove('hidden');
+        }
+
+        function hideFavoritesEmptyState() {
+            favoritesEmptyState.classList.add('hidden');
+        }
+
+        function rerenderProductCard(itemId) {
+            const card = document.querySelector(`.product-card[data-item-id="${itemId}"]`);
+            if (card) {
+                const product = searchResults.find(p => p.item_id === itemId) || favorites.find(p => p.item_id === itemId);
+                if (product) {
+                    const newCard = createProductCard(product);
+                    card.parentNode.replaceChild(newCard, card);
+                }
+            }
+        }
+
+        async function toggleFavorite(event, itemId) {
+            event.stopPropagation(); // Prevent card click
+            if (isFavorite(itemId)) {
+                await removeFavorite(itemId);
+            } else {
+                const item = searchResults.find(p => p.item_id === itemId) || favorites.find(p => p.item_id === itemId);
+                if (item) {
+                    await addFavorite(item);
+                }
+            }
+        }
+
         // Initialize page
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async () => {
             searchInput.focus();
             // Add input event listeners for feedback validation
             document.getElementById('minSellerFeedback').addEventListener('input', validateFeedbackInputs);
             document.getElementById('maxSellerFeedback').addEventListener('input', validateFeedbackInputs);
+            await fetchFavorites();
+            showView('search');
         });
     </script>
 </body>

@@ -6,13 +6,14 @@ from pathlib import Path
 
 from app.search_routes import router as search_router
 from app.debug_routes import router as debug_router
+from app.favorites_routes import router as favorites_router
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 STATIC_DIR = PROJECT_ROOT / "static"
 
 app = FastAPI(
-    title="Ebay Product Search",
-    description="A simple API to search for products on eBay.",
+    title="eBay Dropshipping Spy",
+    description="A powerful tool for eBay product research and analysis.",
     version="1.0.0"
 )
 
@@ -20,6 +21,7 @@ STATIC_DIR.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.include_router(search_router)
 app.include_router(debug_router)
+app.include_router(favorites_router)
 
 @app.get("/", response_class=FileResponse)
 async def read_root():
