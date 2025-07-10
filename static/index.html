@@ -875,6 +875,20 @@
             });
         });
 
+        // View Management
+        async function showView(viewName) {
+            searchView.classList.add('hidden');
+            favoritesView.classList.add('hidden');
+
+            if (viewName === 'search') {
+                searchView.classList.remove('hidden');
+            } else if (viewName === 'favorites') {
+                favoritesView.classList.remove('hidden');
+                await fetchFavorites(); // Always get the latest favorites
+                displayFavorites();
+            }
+        }
+
         // Search function
         async function handleSearch(e) {
             e.preventDefault();
