@@ -95,13 +95,17 @@ async def search_products(
         # Build eBay API compatible filters
         filters = []
         
-        # Price filters
-        if min_price is not None and max_price is not None:
-            filters.append(f"price:[{min_price}..{max_price}]")
-        elif min_price is not None:
-            filters.append(f"price:[{min_price}..]")
-        elif max_price is not None:
-            filters.append(f"price:[..{max_price}]")
+        # Price filters - ensure proper decimal formatting
+        if min_price is not None or max_price is not None:
+            min_val = f"{min_price:.2f}" if min_price is not None else ""
+            max_val = f"{max_price:.2f}" if max_price is not None else ""
+            
+            if min_price is not None and max_price is not None:
+                filters.append(f"price:[{min_val}..{max_val}]")
+            elif min_price is not None:
+                filters.append(f"price:[{min_val}..]")
+            elif max_price is not None:
+                filters.append(f"price:[..{max_val}]")
         
         # Condition filter
         if condition:
@@ -165,10 +169,14 @@ async def search_products(
         filtered_items = []
         for item in processed_results.get("items", []):
             # Check price range (double-check)
-            price_value = float(item.get("price", {}).get("value", 0))
-            if min_price is not None and price_value < min_price:
-                continue
-            if max_price is not None and price_value > max_price:
+            try:
+                price_value = float(item.get("price", {}).get("value", 0))
+                if min_price is not None and price_value < min_price:
+                    continue
+                if max_price is not None and price_value > max_price:
+                    continue
+            except (ValueError, TypeError):
+                # Skip items with invalid price values
                 continue
             
             # Check free shipping
