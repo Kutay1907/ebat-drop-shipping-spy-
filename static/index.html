@@ -867,7 +867,7 @@
             <div id="seller-not-connected">
                 <h3>Connect Your eBay Account</h3>
                 <p>Link your eBay seller account to create and manage listings directly from here.</p>
-                <button class="search-button" id="connect-ebay-btn">
+                <button class="search-button" onclick="window.location.href='/auth/ebay/login'" id="connect-ebay-btn">
                     <i class="fab fa-ebay"></i> Connect with eBay
                 </button>
             </div>
@@ -958,9 +958,10 @@
         document.getElementById('resultsSort').addEventListener('change', sortResults);
         document.getElementById('show-search-view').addEventListener('click', () => showView('search'));
         document.getElementById('show-favorites-view').addEventListener('click', () => showView('favorites'));
-        connectEbayBtn.addEventListener('click', () => {
-            window.location.href = '/api/auth/login';
-        });
+        // Remove old event listener since we now use onclick in the HTML
+        // connectEbayBtn.addEventListener('click', () => {
+        //     window.location.href = '/api/auth/login';
+        // });
         listingForm.addEventListener('submit', handleListingSubmit);
 
         // Quick filter buttons
