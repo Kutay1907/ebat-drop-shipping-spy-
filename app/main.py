@@ -7,14 +7,20 @@ from pathlib import Path
 from app.search_routes import router as search_router
 from app.debug_routes import router as debug_router
 from app.favorites_routes import router as favorites_router
+from app.auth_routes import router as auth_router
+from app.listing_routes import router as listing_router
+from .database import engine, Base
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 STATIC_DIR = PROJECT_ROOT / "static"
 
 app = FastAPI(
-    title="eBay Dropshipping Spy",
-    description="A powerful tool for eBay product research and analysis.",
-    version="1.0.0"
+    title="eBay Dropshipping Spy & Seller Tool",
+    description="A powerful tool for eBay product research, analysis, and seller management.",
+    version="2.0.0"
 )
 
 STATIC_DIR.mkdir(exist_ok=True)
@@ -22,6 +28,8 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.include_router(search_router)
 app.include_router(debug_router)
 app.include_router(favorites_router)
+app.include_router(auth_router)
+app.include_router(listing_router)
 
 @app.get("/", response_class=FileResponse)
 async def read_root():
