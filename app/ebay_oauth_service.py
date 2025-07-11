@@ -34,34 +34,19 @@ class EbayOAuthService:
         self.token_url = "https://api.ebay.com/identity/v1/oauth2/token"
         self.auth_url = "https://auth.ebay.com/oauth2/authorize"
         
-        # Comprehensive scopes for full eBay functionality
+        # Conservative scopes - start with core functionality first
         self.scopes = [
-            # Inventory Management
+            # Core Inventory Management (required for basic seller operations)
             "https://api.ebay.com/oauth/api_scope/sell.inventory",
             "https://api.ebay.com/oauth/api_scope/sell.inventory.readonly",
             
-            # Account Management
+            # Account Management (for seller account access)
             "https://api.ebay.com/oauth/api_scope/sell.account",
             "https://api.ebay.com/oauth/api_scope/sell.account.readonly",
             
-            # Order Management
+            # Order Management (for fulfillment)
             "https://api.ebay.com/oauth/api_scope/sell.fulfillment",
-            "https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly",
-            
-            # Marketing & Promotions
-            "https://api.ebay.com/oauth/api_scope/sell.marketing",
-            "https://api.ebay.com/oauth/api_scope/sell.marketing.readonly",
-            
-            # Analytics & Finances
-            "https://api.ebay.com/oauth/api_scope/sell.analytics.readonly",
-            "https://api.ebay.com/oauth/api_scope/sell.finances",
-            
-            # Catalog & Metadata
-            "https://api.ebay.com/oauth/api_scope/sell.item.draft",
-            "https://api.ebay.com/oauth/api_scope/sell.item",
-            
-            # General Access
-            "https://api.ebay.com/oauth/api_scope"
+            "https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly"
         ]
     
     def get_auth_url(self, state: Optional[str] = None) -> str:
@@ -77,18 +62,28 @@ class EbayOAuthService:
         if not all([self.client_id, self.client_secret, self.redirect_uri]):
             raise ValueError("Missing eBay OAuth credentials. Check EBAY_CLIENT_ID, EBAY_CLIENT_SECRET, and EBAY_REDIRECT_URI.")
         
+        # Ensure redirect URI is properly formatted
+        if not self.redirect_uri.startswith("https://"):
+            raise ValueError("EBAY_REDIRECT_URI must use HTTPS protocol")
+        
         params = {
             "client_id": self.client_id,
             "redirect_uri": self.redirect_uri,
             "response_type": "code",
-            "scope": " ".join(self.scopes),
-            "prompt": "login"
+            "scope": " ".join(self.scopes)
+            # Remove "prompt": "login" as it might cause issues
         }
         
         if state:
             params["state"] = state
             
-        return f"{self.auth_url}?{urlencode(params)}"
+        url = f"{self.auth_url}?{urlencode(params)}"
+        
+        # Log for debugging (without sensitive data)
+        logger.info(f"Generated OAuth URL with {len(self.scopes)} scopes")
+        logger.info(f"Redirect URI: {self.redirect_uri}")
+        
+        return url
     
     async def exchange_code_for_tokens(self, code: str) -> Dict[str, Any]:
         """

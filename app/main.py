@@ -43,6 +43,51 @@ app.include_router(listing_router)
 
 # --- eBay OAuth Routes ---
 
+@app.get("/debug/oauth-url", tags=["debug"])
+async def debug_oauth_url():
+    """
+    Debug endpoint to inspect the OAuth URL generation.
+    This helps diagnose parameter issues with eBay OAuth.
+    """
+    try:
+        # Check environment variables
+        client_id = os.getenv("EBAY_CLIENT_ID")
+        client_secret = os.getenv("EBAY_CLIENT_SECRET")
+        redirect_uri = os.getenv("EBAY_REDIRECT_URI")
+
+        logger.info(f"Debug OAuth URL - Client ID: {client_id[:10] if client_id else 'None'}...")
+        logger.info(f"Debug OAuth URL - Redirect URI: {redirect_uri}")
+
+        # Generate the auth URL
+        auth_url = ebay_oauth.get_auth_url()
+
+        return {
+            "status": "success",
+            "environment_check": {
+                "client_id": "SET" if client_id else "NOT_SET",
+                "client_secret": "SET" if client_secret else "NOT_SET",
+                "redirect_uri": "SET" if redirect_uri else "NOT_SET"
+            },
+            "credentials_preview": {
+                "client_id": f"{client_id[:10]}..." if client_id else None,
+                "redirect_uri": redirect_uri
+            },
+            "generated_url": auth_url,
+            "url_length": len(auth_url) if auth_url else 0
+        }
+
+    except Exception as e:
+        logger.error(f"Debug OAuth URL error: {str(e)}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "environment_check": {
+                "client_id": "SET" if os.getenv("EBAY_CLIENT_ID") else "NOT_SET",
+                "client_secret": "SET" if os.getenv("EBAY_CLIENT_SECRET") else "NOT_SET",
+                "redirect_uri": "SET" if os.getenv("EBAY_REDIRECT_URI") else "NOT_SET"
+            }
+        }
+
 @app.get("/connect/ebay", tags=["authentication"])
 async def connect_ebay():
     """
@@ -51,7 +96,7 @@ async def connect_ebay():
     """
     try:
         auth_url = ebay_oauth.get_auth_url()
-        logger.info("Redirecting user to eBay OAuth consent page")
+        logger.info(f"Redirecting user to eBay OAuth consent page: {auth_url[:100]}...")
         return RedirectResponse(url=auth_url)
     except ValueError as e:
         logger.error(f"OAuth configuration error: {str(e)}")
@@ -85,11 +130,11 @@ async def auth_ebay_callback(
     Exchange authorization code for access and refresh tokens.
     """
     logger.info("Received eBay OAuth callback")
-    
+
     try:
         # Exchange code for tokens
         token_data = await ebay_oauth.exchange_code_for_tokens(code)
-        
+
         # Create or get user (in production, get user from session)
         user_email = "default_seller@example.com"
         db_user = crud.get_user_by_email(db, email=user_email)
@@ -105,7 +150,7 @@ async def auth_ebay_callback(
 
         # Store encrypted tokens using the OAuth service
         ebay_oauth.store_user_tokens(db, db_user.id, token_data)
-        
+
         logger.info(f"Successfully connected eBay account for user: {user_email}")
         return RedirectResponse(url="/?auth_status=success")
 
@@ -124,7 +169,7 @@ async def auth_status(db: Session = Depends(get_db)):
     """
     try:
         user_id = 1  # In production, get from session/JWT
-        
+
         is_connected = ebay_oauth.is_user_connected(db, user_id)
         if not is_connected:
             return {
@@ -132,21 +177,21 @@ async def auth_status(db: Session = Depends(get_db)):
                 "needs_refresh": False,
                 "message": "eBay account not connected"
             }
-        
+
         # Check if token needs refresh
         needs_refresh = ebay_oauth.is_token_expired(db, user_id)
-        
+
         # Get token expiration info
         token_record = ebay_oauth.get_stored_token(db, user_id)
         expires_at = token_record.access_token_expires_at.isoformat() if token_record else None
-        
+
         return {
             "is_connected": True,
             "needs_refresh": needs_refresh,
             "expires_at": expires_at,
             "message": "eBay account connected successfully"
         }
-        
+
     except Exception as e:
         logger.error(f"Error checking auth status: {str(e)}")
         raise HTTPException(
@@ -162,20 +207,20 @@ async def get_valid_token(db: Session = Depends(get_db)):
     """
     try:
         user_id = 1  # In production, get from session/JWT
-        
+
         access_token = await ebay_oauth.get_valid_access_token(db, user_id)
         if not access_token:
             raise HTTPException(
                 status_code=401,
                 detail="No valid eBay authentication available. Please connect your account."
             )
-        
+
         return {
             "access_token": access_token[:20] + "...",  # Only show partial token for security
             "token_type": "Bearer",
             "message": "Valid access token retrieved"
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -192,14 +237,14 @@ async def disconnect_ebay(db: Session = Depends(get_db)):
     """
     try:
         user_id = 1  # In production, get from session/JWT
-        
+
         ebay_oauth.disconnect_user(db, user_id)
-        
+
         return {
             "success": True,
             "message": "eBay account disconnected successfully"
         }
-        
+
     except Exception as e:
         logger.error(f"Error disconnecting eBay account: {str(e)}")
         raise HTTPException(
@@ -212,7 +257,7 @@ async def disconnect_ebay(db: Session = Depends(get_db)):
 async def get_authenticated_ebay_client(db: Session, user_id: int):
     """
     Get an authenticated eBay API client for making authorized requests.
-    
+
     Usage example:
         async with get_authenticated_ebay_client(db, user_id) as client:
             response = await client.get("/sell/inventory/v1/inventory_item")
@@ -223,13 +268,13 @@ async def get_authenticated_ebay_client(db: Session, user_id: int):
             status_code=401,
             detail="User not authenticated with eBay"
         )
-    
+
     headers = {
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
-    
+
     return httpx.AsyncClient(
         base_url="https://api.ebay.com",
         headers=headers,
@@ -244,10 +289,10 @@ async def get_user_inventory(db: Session = Depends(get_db)):
     """
     try:
         user_id = 1  # In production, get from session/JWT
-        
+
         async with await get_authenticated_ebay_client(db, user_id) as client:
             response = await client.get("/sell/inventory/v1/inventory_item")
-            
+
             if response.status_code == 200:
                 return response.json()
             else:
@@ -255,7 +300,7 @@ async def get_user_inventory(db: Session = Depends(get_db)):
                     status_code=response.status_code,
                     detail=f"eBay API error: {response.text}"
                 )
-                
+
     except HTTPException:
         raise
     except Exception as e:
@@ -272,10 +317,10 @@ async def get_user_orders(db: Session = Depends(get_db)):
     """
     try:
         user_id = 1  # In production, get from session/JWT
-        
+
         async with await get_authenticated_ebay_client(db, user_id) as client:
             response = await client.get("/sell/fulfillment/v1/order")
-            
+
             if response.status_code == 200:
                 return response.json()
             else:
@@ -283,7 +328,7 @@ async def get_user_orders(db: Session = Depends(get_db)):
                     status_code=response.status_code,
                     detail=f"eBay API error: {response.text}"
                 )
-                
+
     except HTTPException:
         raise
     except Exception as e:
