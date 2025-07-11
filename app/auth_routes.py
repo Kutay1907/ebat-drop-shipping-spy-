@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 from urllib.parse import urlencode
 import httpx
 
-from .. import crud
-from ..database import get_db
+from app import crud
+from app.database import get_db
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 

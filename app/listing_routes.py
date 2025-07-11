@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import List
 
-from .. import crud
-from ..database import get_db
-from ..ebay_api_client import EbayAPIClient
+from app import crud
+from app.database import get_db
+from app.ebay_api_client import EbayAPIClient
 
 router = APIRouter(prefix="/api/seller", tags=["seller"])
 
