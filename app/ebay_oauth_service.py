@@ -49,18 +49,12 @@ class EbayOAuthService:
         self.auth_url = "https://auth.ebay.com/oauth2/authorize"
         self.token_url = "https://api.ebay.com/identity/v1/oauth2/token"
         
-        # eBay OAuth 2.0 scopes for selling applications
+        # Start with minimal required scopes
         self.scopes = [
-            "https://api.ebay.com/oauth/api_scope/sell.inventory",
-            "https://api.ebay.com/oauth/api_scope/sell.inventory.readonly", 
-            "https://api.ebay.com/oauth/api_scope/sell.account",
-            "https://api.ebay.com/oauth/api_scope/sell.account.readonly",
-            "https://api.ebay.com/oauth/api_scope/sell.fulfillment",
-            "https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly",
-            "https://api.ebay.com/oauth/api_scope/sell.marketing",
-            "https://api.ebay.com/oauth/api_scope/sell.marketing.readonly",
-            "https://api.ebay.com/oauth/api_scope/sell.analytics.readonly",
-            "https://api.ebay.com/oauth/api_scope/sell.finances"
+            # Core scopes for basic functionality
+            "https://api.ebay.com/oauth/api_scope",
+            "https://api.ebay.com/oauth/api_scope/sell.inventory.readonly",
+            "https://api.ebay.com/oauth/api_scope/sell.account.readonly"
         ]
         
         self._validate_credentials()
@@ -85,8 +79,19 @@ class EbayOAuthService:
             raise ValueError(f"Missing required environment variables: {', '.join(missing_creds)}")
             
         # Validate RuName format
-        if self.redirect_uri and ('\n' in self.redirect_uri or '\r' in self.redirect_uri):
+        if not self.redirect_uri:
+            raise ValueError("EBAY_REDIRECT_URI is required")
+            
+        if '\n' in self.redirect_uri or '\r' in self.redirect_uri:
             raise ValueError("EBAY_REDIRECT_URI contains invalid newline characters")
+        
+        # Validate RuName format (should be in the format: name-appid-env-randomstring)
+        try:
+            runame_parts = self.redirect_uri.split('-')
+            if len(runame_parts) != 4:
+                raise ValueError("EBAY_REDIRECT_URI should be in format: name-appid-env-randomstring")
+        except AttributeError:
+            raise ValueError("EBAY_REDIRECT_URI is invalid")
     
     def get_authorization_url(self, state: Optional[str] = None) -> str:
         """
@@ -103,7 +108,9 @@ class EbayOAuthService:
             "client_id": self.client_id,
             "response_type": "code",
             "redirect_uri": self.redirect_uri,  # This should be your RuName
-            "scope": " ".join(self.scopes)
+            "scope": " ".join(self.scopes),
+            "prompt": "login",  # Force login screen
+            "response_mode": "query"  # Ensure response comes as query parameters
         }
         
         if state:
@@ -113,6 +120,7 @@ class EbayOAuthService:
         
         logger.info(f"Generated eBay OAuth URL with {len(self.scopes)} scopes")
         logger.info(f"Redirect URI (RuName): {self.redirect_uri}")
+        logger.info(f"Full authorization URL: {url}")
         
         return url
     
