@@ -54,26 +54,29 @@ async def debug_oauth_url():
         client_id = os.getenv("EBAY_CLIENT_ID")
         client_secret = os.getenv("EBAY_CLIENT_SECRET")
         redirect_uri = os.getenv("EBAY_REDIRECT_URI")
+        encryption_key = os.getenv("ENCRYPTION_KEY")
 
         logger.info(f"Debug OAuth URL - Client ID: {client_id[:10] if client_id else 'None'}...")
         logger.info(f"Debug OAuth URL - Redirect URI: {redirect_uri}")
 
         # Generate the auth URL
-        auth_url = ebay_oauth.get_auth_url()
+        auth_url = ebay_oauth.get_authorization_url()
 
         return {
             "status": "success",
             "environment_check": {
                 "client_id": "SET" if client_id else "NOT_SET",
                 "client_secret": "SET" if client_secret else "NOT_SET",
-                "redirect_uri": "SET" if redirect_uri else "NOT_SET"
+                "redirect_uri": "SET" if redirect_uri else "NOT_SET",
+                "encryption_key": "SET" if encryption_key else "NOT_SET"
             },
             "credentials_preview": {
                 "client_id": f"{client_id[:10]}..." if client_id else None,
                 "redirect_uri": redirect_uri
             },
             "generated_url": auth_url,
-            "url_length": len(auth_url) if auth_url else 0
+            "url_length": len(auth_url) if auth_url else 0,
+            "scopes_count": len(ebay_oauth.scopes)
         }
 
     except Exception as e:
@@ -84,7 +87,8 @@ async def debug_oauth_url():
             "environment_check": {
                 "client_id": "SET" if os.getenv("EBAY_CLIENT_ID") else "NOT_SET",
                 "client_secret": "SET" if os.getenv("EBAY_CLIENT_SECRET") else "NOT_SET",
-                "redirect_uri": "SET" if os.getenv("EBAY_REDIRECT_URI") else "NOT_SET"
+                "redirect_uri": "SET" if os.getenv("EBAY_REDIRECT_URI") else "NOT_SET",
+                "encryption_key": "SET" if os.getenv("ENCRYPTION_KEY") else "NOT_SET"
             }
         }
 
@@ -95,14 +99,14 @@ async def connect_ebay():
     This is the main entry point for eBay authentication.
     """
     try:
-        auth_url = ebay_oauth.get_auth_url()
+        auth_url = ebay_oauth.get_authorization_url()
         logger.info(f"Redirecting user to eBay OAuth consent page: {auth_url[:100]}...")
         return RedirectResponse(url=auth_url)
     except ValueError as e:
         logger.error(f"OAuth configuration error: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail="eBay OAuth not properly configured. Please check server configuration."
+            detail=f"eBay OAuth not properly configured: {str(e)}"
         )
     except Exception as e:
         logger.error(f"Unexpected error in connect_ebay: {str(e)}")
@@ -135,7 +139,7 @@ async def auth_ebay_callback(
         # Exchange code for tokens
         token_data = await ebay_oauth.exchange_code_for_tokens(code)
 
-        # Create or get user (in production, get user from session)
+        # Create or get user (in production, get user from session/JWT)
         user_email = "default_seller@example.com"
         db_user = crud.get_user_by_email(db, email=user_email)
         if not db_user:
@@ -336,6 +340,40 @@ async def get_user_orders(db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=500,
             detail="Failed to fetch orders from eBay"
+        )
+
+@app.get("/ebay/profile", tags=["ebay-api"])
+async def get_ebay_profile(db: Session = Depends(get_db)):
+    """
+    Example route to make an authenticated eBay API call using stored access token.
+    This demonstrates how to use the stored tokens to access eBay APIs.
+    """
+    try:
+        user_id = 1  # In production, get from session/JWT
+
+        async with await get_authenticated_ebay_client(db, user_id) as client:
+            # Get user's account information
+            response = await client.get("/sell/account/v1/account")
+
+            if response.status_code == 200:
+                return {
+                    "status": "success",
+                    "data": response.json(),
+                    "message": "Successfully retrieved eBay profile"
+                }
+            else:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"eBay API error: {response.text}"
+                )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching eBay profile: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch eBay profile"
         )
 
 # --- Static Routes ---

@@ -1,12 +1,17 @@
 """
-Comprehensive eBay OAuth Service
-===============================
+eBay OAuth 2.0 Service - Production Ready Implementation
+=====================================================
 
-This service handles the complete eBay OAuth2 flow including:
-- User authentication redirect
-- Token exchange and storage
+This service implements eBay's OAuth 2.0 authorization code flow according to 
+eBay Developer Program specifications. It handles user authentication, token 
+management, and automatic refresh functionality.
+
+Key Features:
+- eBay-specific OAuth 2.0 implementation
+- RuName-based redirect handling
 - Automatic token refresh
-- Secure token management with encryption
+- Secure token storage with encryption
+- Multi-user support
 """
 
 import os
@@ -18,38 +23,63 @@ from urllib.parse import urlencode
 from sqlalchemy.orm import Session
 
 from . import crud, security, models
-from .database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
 class EbayOAuthService:
     """
-    Complete eBay OAuth service for user authentication and token management.
+    Complete eBay OAuth 2.0 service following eBay Developer Program specifications.
+    
+    This service handles the full OAuth flow for eBay user authentication including:
+    - Authorization code generation
+    - Token exchange and refresh
+    - Secure token storage
+    - User session management
     """
     
     def __init__(self):
         self.client_id = os.getenv("EBAY_CLIENT_ID")
         self.client_secret = os.getenv("EBAY_CLIENT_SECRET")
-        self.redirect_uri = os.getenv("EBAY_REDIRECT_URI")
-        self.token_url = "https://api.ebay.com/identity/v1/oauth2/token"
-        self.auth_url = "https://auth.ebay.com/oauth2/authorize"
+        self.redirect_uri = os.getenv("EBAY_REDIRECT_URI")  # This should be your RuName
+        self.encryption_key = os.getenv("ENCRYPTION_KEY")
         
-        # Conservative scopes - start with core functionality first
+        # eBay OAuth 2.0 endpoints (Production)
+        self.auth_url = "https://auth.ebay.com/oauth2/authorize"
+        self.token_url = "https://api.ebay.com/identity/v1/oauth2/token"
+        
+        # eBay OAuth 2.0 scopes for selling applications
         self.scopes = [
-            # Core Inventory Management (required for basic seller operations)
             "https://api.ebay.com/oauth/api_scope/sell.inventory",
-            "https://api.ebay.com/oauth/api_scope/sell.inventory.readonly",
-            
-            # Account Management (for seller account access)
+            "https://api.ebay.com/oauth/api_scope/sell.inventory.readonly", 
             "https://api.ebay.com/oauth/api_scope/sell.account",
             "https://api.ebay.com/oauth/api_scope/sell.account.readonly",
-            
-            # Order Management (for fulfillment)
             "https://api.ebay.com/oauth/api_scope/sell.fulfillment",
-            "https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly"
+            "https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly",
+            "https://api.ebay.com/oauth/api_scope/sell.marketing",
+            "https://api.ebay.com/oauth/api_scope/sell.marketing.readonly",
+            "https://api.ebay.com/oauth/api_scope/sell.analytics.readonly",
+            "https://api.ebay.com/oauth/api_scope/sell.finances"
         ]
+        
+        self._validate_credentials()
     
-    def get_auth_url(self, state: Optional[str] = None) -> str:
+    def _validate_credentials(self):
+        """Validate that all required credentials are present."""
+        missing_creds = []
+        
+        if not self.client_id:
+            missing_creds.append("EBAY_CLIENT_ID")
+        if not self.client_secret:
+            missing_creds.append("EBAY_CLIENT_SECRET") 
+        if not self.redirect_uri:
+            missing_creds.append("EBAY_REDIRECT_URI")
+        if not self.encryption_key:
+            missing_creds.append("ENCRYPTION_KEY")
+            
+        if missing_creds:
+            raise ValueError(f"Missing required environment variables: {', '.join(missing_creds)}")
+    
+    def get_authorization_url(self, state: Optional[str] = None) -> str:
         """
         Generate the eBay OAuth authorization URL.
         
@@ -59,19 +89,12 @@ class EbayOAuthService:
         Returns:
             Complete eBay OAuth authorization URL
         """
-        if not all([self.client_id, self.client_secret, self.redirect_uri]):
-            raise ValueError("Missing eBay OAuth credentials. Check EBAY_CLIENT_ID, EBAY_CLIENT_SECRET, and EBAY_REDIRECT_URI.")
-        
-        # Ensure redirect URI is properly formatted
-        if not self.redirect_uri.startswith("https://"):
-            raise ValueError("EBAY_REDIRECT_URI must use HTTPS protocol")
-        
+        # eBay OAuth 2.0 authorization parameters
         params = {
             "client_id": self.client_id,
-            "redirect_uri": self.redirect_uri,
             "response_type": "code",
+            "redirect_uri": self.redirect_uri,  # This should be your RuName
             "scope": " ".join(self.scopes)
-            # Remove "prompt": "login" as it might cause issues
         }
         
         if state:
@@ -79,46 +102,51 @@ class EbayOAuthService:
             
         url = f"{self.auth_url}?{urlencode(params)}"
         
-        # Log for debugging (without sensitive data)
-        logger.info(f"Generated OAuth URL with {len(self.scopes)} scopes")
-        logger.info(f"Redirect URI: {self.redirect_uri}")
+        logger.info(f"Generated eBay OAuth URL with {len(self.scopes)} scopes")
+        logger.info(f"Redirect URI (RuName): {self.redirect_uri}")
         
         return url
     
-    async def exchange_code_for_tokens(self, code: str) -> Dict[str, Any]:
+    async def exchange_code_for_tokens(self, authorization_code: str) -> Dict[str, Any]:
         """
         Exchange authorization code for access and refresh tokens.
         
         Args:
-            code: Authorization code from eBay callback
+            authorization_code: The code returned from eBay's authorization flow
             
         Returns:
-            Token data dictionary containing access_token, refresh_token, etc.
+            Dictionary containing token information
         """
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": f"Basic {self._get_basic_auth()}"
+        }
+        
         data = {
             "grant_type": "authorization_code",
-            "code": code,
+            "code": authorization_code,
             "redirect_uri": self.redirect_uri
         }
         
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                self.token_url,
-                headers=headers,
-                auth=(self.client_id, self.client_secret),
-                data=data,
-                timeout=30
-            )
-        
-        if response.status_code != 200:
-            logger.error(f"Token exchange failed: {response.status_code} - {response.text}")
-            raise Exception(f"Failed to exchange code for tokens: {response.text}")
-        
-        token_data = response.json()
-        logger.info("Successfully exchanged code for eBay tokens")
-        return token_data
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.post(self.token_url, headers=headers, data=data)
+            
+            if response.status_code != 200:
+                logger.error(f"eBay token exchange failed: {response.status_code} - {response.text}")
+                raise Exception(f"Failed to exchange authorization code: {response.text}")
+            
+            token_data = response.json()
+            logger.info("Successfully obtained eBay access and refresh tokens")
+            
+            return token_data
+            
+        except httpx.RequestError as e:
+            logger.error(f"Request error during token exchange: {str(e)}")
+            raise Exception(f"Network error during token exchange: {str(e)}")
+        except Exception as e:
+            logger.error(f"Unexpected error during token exchange: {str(e)}")
+            raise
     
     async def refresh_access_token(self, refresh_token: str) -> Dict[str, Any]:
         """
@@ -130,35 +158,40 @@ class EbayOAuthService:
         Returns:
             New token data dictionary
         """
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": f"Basic {self._get_basic_auth()}"
+        }
+        
         data = {
             "grant_type": "refresh_token",
             "refresh_token": refresh_token,
             "scope": " ".join(self.scopes)
         }
         
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                self.token_url,
-                headers=headers,
-                auth=(self.client_id, self.client_secret),
-                data=data,
-                timeout=30
-            )
-        
-        if response.status_code != 200:
-            logger.error(f"Token refresh failed: {response.status_code} - {response.text}")
-            raise Exception(f"Failed to refresh token: {response.text}")
-        
-        token_data = response.json()
-        
-        # If refresh token wasn't renewed, keep the old one
-        if "refresh_token" not in token_data:
-            token_data["refresh_token"] = refresh_token
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.post(self.token_url, headers=headers, data=data)
             
-        logger.info("Successfully refreshed eBay access token")
-        return token_data
+            if response.status_code != 200:
+                logger.error(f"eBay token refresh failed: {response.status_code} - {response.text}")
+                raise Exception(f"Failed to refresh access token: {response.text}")
+            
+            token_data = response.json()
+            
+            # eBay may not always return a new refresh token
+            if "refresh_token" not in token_data:
+                token_data["refresh_token"] = refresh_token
+                
+            logger.info("Successfully refreshed eBay access token")
+            return token_data
+            
+        except httpx.RequestError as e:
+            logger.error(f"Request error during token refresh: {str(e)}")
+            raise Exception(f"Network error during token refresh: {str(e)}")
+        except Exception as e:
+            logger.error(f"Unexpected error during token refresh: {str(e)}")
+            raise
     
     def store_user_tokens(self, db: Session, user_id: int, token_data: Dict[str, Any]) -> None:
         """
@@ -171,7 +204,7 @@ class EbayOAuthService:
         """
         try:
             crud.update_or_create_token(db, user_id=user_id, token_data=token_data)
-            logger.info(f"Stored encrypted tokens for user {user_id}")
+            logger.info(f"Stored encrypted eBay tokens for user {user_id}")
         except Exception as e:
             logger.error(f"Failed to store tokens for user {user_id}: {str(e)}")
             raise
@@ -210,27 +243,6 @@ class EbayOAuthService:
             logger.error(f"Failed to decrypt access token for user {user_id}: {str(e)}")
             return None
     
-    def get_decrypted_refresh_token(self, db: Session, user_id: int) -> Optional[str]:
-        """
-        Get and decrypt the user's refresh token.
-        
-        Args:
-            db: Database session
-            user_id: User ID
-            
-        Returns:
-            Decrypted refresh token or None
-        """
-        token_record = self.get_stored_token(db, user_id)
-        if not token_record:
-            return None
-            
-        try:
-            return security.decrypt_token(token_record.encrypted_refresh_token)
-        except Exception as e:
-            logger.error(f"Failed to decrypt refresh token for user {user_id}: {str(e)}")
-            return None
-    
     def is_token_expired(self, db: Session, user_id: int, buffer_minutes: int = 5) -> bool:
         """
         Check if the user's access token is expired or will expire soon.
@@ -263,12 +275,12 @@ class EbayOAuthService:
         """
         token_record = self.get_stored_token(db, user_id)
         if not token_record:
-            logger.warning(f"No token found for user {user_id}")
+            logger.warning(f"No eBay token found for user {user_id}")
             return None
         
         # Check if token needs refresh
         if self.is_token_expired(db, user_id):
-            logger.info(f"Token expired for user {user_id}, refreshing...")
+            logger.info(f"eBay token expired for user {user_id}, refreshing...")
             
             try:
                 # Get and decrypt refresh token
@@ -284,7 +296,7 @@ class EbayOAuthService:
                 return new_token_data["access_token"]
                 
             except Exception as e:
-                logger.error(f"Failed to refresh token for user {user_id}: {str(e)}")
+                logger.error(f"Failed to refresh eBay token for user {user_id}: {str(e)}")
                 return None
         
         # Token is still valid, return it
@@ -313,12 +325,21 @@ class EbayOAuthService:
             user_id: User ID
         """
         try:
-            # Note: You'll need to implement this in crud.py
-            # crud.delete_user_token(db, user_id)
-            logger.info(f"Disconnected eBay account for user {user_id}")
+            # Delete the user's token record
+            token_record = self.get_stored_token(db, user_id)
+            if token_record:
+                db.delete(token_record)
+                db.commit()
+                logger.info(f"Disconnected eBay account for user {user_id}")
         except Exception as e:
             logger.error(f"Failed to disconnect user {user_id}: {str(e)}")
             raise
+    
+    def _get_basic_auth(self) -> str:
+        """Generate Basic Auth header value for eBay API requests."""
+        import base64
+        credentials = f"{self.client_id}:{self.client_secret}"
+        return base64.b64encode(credentials.encode()).decode()
 
 # Global instance
 ebay_oauth = EbayOAuthService() 
