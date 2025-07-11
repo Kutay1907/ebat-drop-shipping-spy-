@@ -7,14 +7,20 @@ import os
 from urllib.parse import urlencode
 import httpx
 from sqlalchemy.orm import Session
+import logging
+from datetime import datetime, timedelta
 
 from app.search_routes import router as search_router
 from app.debug_routes import router as debug_router
 from app.favorites_routes import router as favorites_router
-# from app.auth_routes import router as auth_router - no longer needed
 from app.listing_routes import router as listing_router
 from .database import engine, Base, get_db
-from . import crud, models
+from . import crud, models, security
+from .ebay_oauth_service import ebay_oauth
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -33,88 +39,270 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.include_router(search_router)
 app.include_router(debug_router)
 app.include_router(favorites_router)
-# app.include_router(auth_router) - no longer needed
 app.include_router(listing_router)
 
-# --- Start of Moved Auth Routes ---
+# --- eBay OAuth Routes ---
 
-CLIENT_ID = os.getenv("EBAY_CLIENT_ID")
-CLIENT_SECRET = os.getenv("EBAY_CLIENT_SECRET")
-REDIRECT_URI = os.getenv("EBAY_REDIRECT_URI")
+@app.get("/connect/ebay", tags=["authentication"])
+async def connect_ebay():
+    """
+    Redirect users to eBay OAuth consent page to connect their account.
+    This is the main entry point for eBay authentication.
+    """
+    try:
+        auth_url = ebay_oauth.get_auth_url()
+        logger.info("Redirecting user to eBay OAuth consent page")
+        return RedirectResponse(url=auth_url)
+    except ValueError as e:
+        logger.error(f"OAuth configuration error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="eBay OAuth not properly configured. Please check server configuration."
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error in connect_ebay: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to initiate eBay connection"
+        )
 
 @app.get("/auth/ebay/login", tags=["authentication"])
 async def ebay_login():
-    """Redirects the user to eBay's consent page to start the OAuth2 flow."""
-    if not all([CLIENT_ID, CLIENT_SECRET, REDIRECT_URI]):
-        raise HTTPException(status_code=500, detail="OAuth credentials not configured on server.")
-        
-    scopes = [
-        "https://api.ebay.com/oauth/api_scope/sell.inventory",
-        "https://api.ebay.com/oauth/api_scope/sell.account",
-        "https://api.ebay.com/oauth/api_scope/sell.fulfillment"
-    ]
-    query_params = {
-        "client_id": CLIENT_ID,
-        "redirect_uri": REDIRECT_URI,
-        "response_type": "code",
-        "scope": " ".join(scopes),
-        "prompt": "login"
-    }
-    ebay_auth_url = f"https://auth.ebay.com/oauth2/authorize?{urlencode(query_params)}"
-    return RedirectResponse(url=ebay_auth_url)
+    """
+    Alternative route that redirects to eBay's consent page.
+    Maintained for backward compatibility.
+    """
+    return await connect_ebay()
 
 @app.get("/auth/ebay/callback", tags=["authentication"])
-async def ebay_callback(code: str = Query(...), db: Session = Depends(get_db)):
-    """Handles the callback from eBay, exchanges the code for tokens, and stores them."""
-    token_url = "https://api.ebay.com/identity/v1/oauth2/token"
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    data = {
-        "grant_type": "authorization_code",
-        "code": code,
-        "redirect_uri": REDIRECT_URI,
-    }
+async def auth_ebay_callback(
+    code: str = Query(..., description="The authorization code from eBay"),
+    state: str = Query(None, description="State parameter for CSRF protection"),
+    db: Session = Depends(get_db)
+):
+    """
+    Handle the callback from eBay OAuth consent page.
+    Exchange authorization code for access and refresh tokens.
+    """
+    logger.info("Received eBay OAuth callback")
     
-    async with httpx.AsyncClient() as client:
-        if not CLIENT_ID or not CLIENT_SECRET:
-            raise HTTPException(status_code=500, detail="OAuth client credentials not configured on server.")
+    try:
+        # Exchange code for tokens
+        token_data = await ebay_oauth.exchange_code_for_tokens(code)
         
-        auth = (CLIENT_ID, CLIENT_SECRET)
-        response = await client.post(token_url, headers=headers, data=data, auth=auth)
-
-    if response.status_code != 200:
-        raise HTTPException(status_code=400, detail=f"Failed to get token from eBay: {response.text}")
-    
-    token_data = response.json()
-
-    user_email = "default_seller@example.com"
-    db_user = crud.get_user_by_email(db, email=user_email)
-    if not db_user:
-        # Create the user, but then refetch it to ensure we have a clean session object
-        crud.create_user(db, email=user_email)
+        # Create or get user (in production, get user from session)
+        user_email = "default_seller@example.com"
         db_user = crud.get_user_by_email(db, email=user_email)
+        if not db_user:
+            db_user = crud.create_user(db, email=user_email)
+            logger.info(f"Created new user: {user_email}")
 
-    if not db_user or not db_user.id:
-        raise HTTPException(status_code=500, detail="Could not create or find a user.")
+        if not db_user:
+            raise HTTPException(
+                status_code=500,
+                detail="Could not create or find user account"
+            )
 
-    crud.update_or_create_token(db, user_id=db_user.id, token_data=token_data)
+        # Store encrypted tokens using the OAuth service
+        ebay_oauth.store_user_tokens(db, db_user.id, token_data)
+        
+        logger.info(f"Successfully connected eBay account for user: {user_email}")
+        return RedirectResponse(url="/?auth_status=success")
 
-    return RedirectResponse(url="/?auth_status=success")
+    except Exception as e:
+        logger.error(f"OAuth callback error: {str(e)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to complete eBay authentication: {str(e)}"
+        )
 
 @app.get("/auth/ebay/status", tags=["authentication"])
 async def auth_status(db: Session = Depends(get_db)):
-    """Checks if the default user has a valid token."""
-    # Using default user_id=1 for this simple case
-    token = crud.get_token_for_user(db, user_id=1)
-    is_connected = token is not None
-    return {"is_connected": is_connected}
+    """
+    Check the authentication status of the user.
+    Returns connection status and token validity information.
+    """
+    try:
+        user_id = 1  # In production, get from session/JWT
+        
+        is_connected = ebay_oauth.is_user_connected(db, user_id)
+        if not is_connected:
+            return {
+                "is_connected": False,
+                "needs_refresh": False,
+                "message": "eBay account not connected"
+            }
+        
+        # Check if token needs refresh
+        needs_refresh = ebay_oauth.is_token_expired(db, user_id)
+        
+        # Get token expiration info
+        token_record = ebay_oauth.get_stored_token(db, user_id)
+        expires_at = token_record.access_token_expires_at.isoformat() if token_record else None
+        
+        return {
+            "is_connected": True,
+            "needs_refresh": needs_refresh,
+            "expires_at": expires_at,
+            "message": "eBay account connected successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error checking auth status: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to check authentication status"
+        )
 
-# --- End of Moved Auth Routes ---
+@app.get("/auth/ebay/token", tags=["authentication"])
+async def get_valid_token(db: Session = Depends(get_db)):
+    """
+    Get a valid access token for the user, refreshing if necessary.
+    This endpoint can be used by other services to get authenticated tokens.
+    """
+    try:
+        user_id = 1  # In production, get from session/JWT
+        
+        access_token = await ebay_oauth.get_valid_access_token(db, user_id)
+        if not access_token:
+            raise HTTPException(
+                status_code=401,
+                detail="No valid eBay authentication available. Please connect your account."
+            )
+        
+        return {
+            "access_token": access_token[:20] + "...",  # Only show partial token for security
+            "token_type": "Bearer",
+            "message": "Valid access token retrieved"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting valid token: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve valid token"
+        )
+
+@app.post("/auth/ebay/disconnect", tags=["authentication"])
+async def disconnect_ebay(db: Session = Depends(get_db)):
+    """
+    Disconnect the user's eBay account by removing stored tokens.
+    """
+    try:
+        user_id = 1  # In production, get from session/JWT
+        
+        ebay_oauth.disconnect_user(db, user_id)
+        
+        return {
+            "success": True,
+            "message": "eBay account disconnected successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error disconnecting eBay account: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to disconnect eBay account"
+        )
+
+# --- Helper Functions for eBay API Usage ---
+
+async def get_authenticated_ebay_client(db: Session, user_id: int):
+    """
+    Get an authenticated eBay API client for making authorized requests.
+    
+    Usage example:
+        async with get_authenticated_ebay_client(db, user_id) as client:
+            response = await client.get("/sell/inventory/v1/inventory_item")
+    """
+    access_token = await ebay_oauth.get_valid_access_token(db, user_id)
+    if not access_token:
+        raise HTTPException(
+            status_code=401,
+            detail="User not authenticated with eBay"
+        )
+    
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+    
+    return httpx.AsyncClient(
+        base_url="https://api.ebay.com",
+        headers=headers,
+        timeout=30
+    )
+
+@app.get("/api/ebay/inventory", tags=["ebay-api"])
+async def get_user_inventory(db: Session = Depends(get_db)):
+    """
+    Example endpoint showing how to use authenticated eBay API calls.
+    Get the user's inventory items from eBay.
+    """
+    try:
+        user_id = 1  # In production, get from session/JWT
+        
+        async with await get_authenticated_ebay_client(db, user_id) as client:
+            response = await client.get("/sell/inventory/v1/inventory_item")
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"eBay API error: {response.text}"
+                )
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching inventory: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch inventory from eBay"
+        )
+
+@app.get("/api/ebay/orders", tags=["ebay-api"])
+async def get_user_orders(db: Session = Depends(get_db)):
+    """
+    Example endpoint showing how to get user's orders from eBay.
+    """
+    try:
+        user_id = 1  # In production, get from session/JWT
+        
+        async with await get_authenticated_ebay_client(db, user_id) as client:
+            response = await client.get("/sell/fulfillment/v1/order")
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"eBay API error: {response.text}"
+                )
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching orders: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch orders from eBay"
+        )
+
+# --- Static Routes ---
 
 @app.get("/", response_class=FileResponse)
 async def read_root():
     index_path = STATIC_DIR / "index.html"
     if not index_path.is_file():
-        return HTMLResponse(content="<h1>Error: index.html not found</h1><p>Please make sure the static/index.html file exists.</p>", status_code=404)
+        return HTMLResponse(
+            content="<h1>Error: index.html not found</h1><p>Please make sure the static/index.html file exists.</p>",
+            status_code=404
+        )
     return FileResponse(index_path)
 
 @app.get("/auth/success")
@@ -123,7 +311,16 @@ async def auth_success():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": "ebay-dropshipping-spy"}
+    return {
+        "status": "ok",
+        "service": "ebay-dropshipping-spy",
+        "ebay_oauth": {
+            "client_id": "configured" if os.getenv("EBAY_CLIENT_ID") else "missing",
+            "client_secret": "configured" if os.getenv("EBAY_CLIENT_SECRET") else "missing",
+            "redirect_uri": "configured" if os.getenv("EBAY_REDIRECT_URI") else "missing",
+            "encryption_key": "configured" if os.getenv("ENCRYPTION_KEY") else "missing"
+        }
+    }
 
 if __name__ == "__main__":
     uvicorn.run(

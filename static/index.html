@@ -867,7 +867,7 @@
             <div id="seller-not-connected">
                 <h3>Connect Your eBay Account</h3>
                 <p>Link your eBay seller account to create and manage listings directly from here.</p>
-                <button class="search-button" onclick="window.location.href='/auth/ebay/login'" id="connect-ebay-btn">
+                <button class="search-button" onclick="window.location.href='/connect/ebay'" id="connect-ebay-btn">
                     <i class="fab fa-ebay"></i> Connect with eBay
                 </button>
             </div>
@@ -998,7 +998,7 @@
         }
 
         async function checkAuthStatus() {
-            const response = await fetch('/api/auth/status');
+            const response = await fetch('/auth/ebay/status');
             const data = await response.json();
             if (data.is_connected) {
                 sellerNotConnectedView.classList.add('hidden');
