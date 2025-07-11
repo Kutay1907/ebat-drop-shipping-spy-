@@ -38,6 +38,10 @@ async def read_root():
         return HTMLResponse(content="<h1>Error: index.html not found</h1><p>Please make sure the static/index.html file exists.</p>", status_code=404)
     return FileResponse(index_path)
 
+@app.get("/auth/success")
+async def auth_success():
+    return FileResponse(STATIC_DIR / "index.html")
+
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "service": "ebay-dropshipping-spy"}

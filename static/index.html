@@ -1402,14 +1402,9 @@
                     body: JSON.stringify(listingData),
                 });
                 const result = await response.json();
-                if (response.ok) {
-                    alert(`Listing created successfully! Listing ID: ${result.listing_id}`);
-                    listingForm.reset();
-                } else {
-                    alert(`Error: ${result.detail}`);
-                }
+                alert(response.ok ? `Success: ${result.message}` : `Error: ${result.detail}`);
             } catch (error) {
-                alert('An unexpected error occurred. Please try again.');
+                alert('An unexpected error occurred.');
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-upload"></i> Create Listing';
