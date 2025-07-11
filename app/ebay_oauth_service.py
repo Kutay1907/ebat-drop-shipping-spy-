@@ -40,7 +40,9 @@ class EbayOAuthService:
     def __init__(self):
         self.client_id = os.getenv("EBAY_CLIENT_ID")
         self.client_secret = os.getenv("EBAY_CLIENT_SECRET")
-        self.redirect_uri = os.getenv("EBAY_REDIRECT_URI")  # This should be your RuName
+        # Clean the RuName by removing any whitespace or newlines
+        raw_redirect_uri = os.getenv("EBAY_REDIRECT_URI", "")
+        self.redirect_uri = raw_redirect_uri.strip() if raw_redirect_uri else None
         self.encryption_key = os.getenv("ENCRYPTION_KEY")
         
         # eBay OAuth 2.0 endpoints (Production)
@@ -62,9 +64,12 @@ class EbayOAuthService:
         ]
         
         self._validate_credentials()
+        
+        # Log the cleaned RuName for verification
+        logger.info(f"Initialized eBay OAuth service with RuName: {self.redirect_uri}")
     
     def _validate_credentials(self):
-        """Validate that all required credentials are present."""
+        """Validate that all required credentials are present and properly formatted."""
         missing_creds = []
         
         if not self.client_id:
@@ -78,6 +83,10 @@ class EbayOAuthService:
             
         if missing_creds:
             raise ValueError(f"Missing required environment variables: {', '.join(missing_creds)}")
+            
+        # Validate RuName format
+        if self.redirect_uri and ('\n' in self.redirect_uri or '\r' in self.redirect_uri):
+            raise ValueError("EBAY_REDIRECT_URI contains invalid newline characters")
     
     def get_authorization_url(self, state: Optional[str] = None) -> str:
         """
@@ -238,7 +247,9 @@ class EbayOAuthService:
             return None
             
         try:
-            return security.decrypt_token(token_record.encrypted_access_token)
+            # Get the actual string value from the Column
+            encrypted_token = str(token_record.encrypted_access_token)
+            return security.decrypt_token(encrypted_token)
         except Exception as e:
             logger.error(f"Failed to decrypt access token for user {user_id}: {str(e)}")
             return None
@@ -260,7 +271,13 @@ class EbayOAuthService:
             return True
             
         buffer_time = timedelta(minutes=buffer_minutes)
-        return datetime.utcnow() >= token_record.access_token_expires_at - buffer_time
+        # Convert SQLAlchemy DateTime to Python datetime
+        expires_at = token_record.access_token_expires_at
+        if isinstance(expires_at, str):
+            expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            
+        # Explicitly convert the comparison result to bool
+        return bool(datetime.utcnow() >= expires_at - buffer_time)
     
     async def get_valid_access_token(self, db: Session, user_id: int) -> Optional[str]:
         """
@@ -284,7 +301,8 @@ class EbayOAuthService:
             
             try:
                 # Get and decrypt refresh token
-                refresh_token = security.decrypt_token(token_record.encrypted_refresh_token)
+                encrypted_token = str(token_record.encrypted_refresh_token)
+                refresh_token = security.decrypt_token(encrypted_token)
                 
                 # Refresh the token
                 new_token_data = await self.refresh_access_token(refresh_token)
