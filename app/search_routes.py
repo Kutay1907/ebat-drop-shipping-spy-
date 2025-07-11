@@ -4,6 +4,7 @@ from enum import Enum
 from datetime import datetime, timezone
 import sys
 import os
+import random
 
 # Add the project root to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -139,13 +140,10 @@ async def search_products(
         if category_ids:
             category_list = [cat.strip() for cat in category_ids.split(",")]
 
-        # If post-search filters are active, fetch a larger pool of items.
+        # Always fetch a larger pool of items to allow for shuffling and variety.
         user_requested_limit = limit
-        api_limit = limit
-        post_filters_active = min_seller_feedback is not None or max_seller_feedback is not None
-        if post_filters_active:
-            api_limit = 200  # Max limit for eBay Browse API
-            logger.info(f"Feedback filter active. Increasing API limit to {api_limit} to find matches.")
+        api_limit = 200  # Max limit for eBay Browse API
+        logger.info(f"API limit set to {api_limit} to provide varied results.")
 
         # Call eBay Browse API
         params = {
@@ -176,6 +174,16 @@ async def search_products(
             params=params,
             headers=headers
         )
+
+        # If the API call fails or returns nothing, exit gracefully.
+        if not results:
+            logger.warning("eBay API returned no results. Returning empty list.")
+            return {
+                "success": True,
+                "results": [],
+                "total_found": 0,
+                "search_metadata": {"message": "No results from eBay API."}
+            }
         
         # Process the results
         processed_results = process_ebay_results(results, marketplace)
@@ -207,6 +215,10 @@ async def search_products(
             final_items.append(item)
         
         logger.info(f"Found {len(final_items)} items after applying all filters.")
+
+        # --- NEW: Shuffle results for variety ---
+        random.shuffle(final_items)
+        logger.info("Shuffled results to provide variety on each search.")
 
         # Truncate results to the user's originally requested limit
         if len(final_items) > user_requested_limit:
