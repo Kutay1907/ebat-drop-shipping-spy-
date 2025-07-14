@@ -776,6 +776,51 @@
             gap: 0.5rem;
         }
 
+        /* Skeleton Loader */
+        .skeleton-loader {
+            display: none;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .skeleton-loader.active {
+            display: block;
+        }
+
+        .skeleton-item {
+            height: 20px;
+            background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 4px;
+            margin-bottom: 0.75rem;
+        }
+
+        .skeleton-item.title {
+            width: 80%;
+            height: 24px;
+        }
+
+        .skeleton-item.price {
+            width: 30%;
+        }
+
+        .skeleton-item.description {
+            width: 100%;
+            height: 60px;
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
         /* Empty State */
         .empty-state {
             text-align: center;
@@ -1177,6 +1222,13 @@
                         </button>
                     </div>
                     <div id="amazon-fetch-status" class="fetch-status hidden"></div>
+                    
+                    <!-- Skeleton Loader -->
+                    <div id="skeleton-loader" class="skeleton-loader">
+                        <div class="skeleton-item title"></div>
+                        <div class="skeleton-item price"></div>
+                        <div class="skeleton-item description"></div>
+                    </div>
                 </div>
                 
                 <form id="listing-form">
@@ -1319,6 +1371,12 @@
                 fetchBtn.innerHTML = '<div class="loading-spinner"></div> Fetching...';
                 showFetchStatus('Scraping product data from Amazon...', 'loading');
                 
+                // Show skeleton loader
+                const skeletonLoader = document.getElementById('skeleton-loader');
+                if (skeletonLoader) {
+                    skeletonLoader.classList.add('active');
+                }
+                
                 // Make request to scrape endpoint
                 const response = await fetch('/api/scrape/amazon', {
                     method: 'POST',
@@ -1351,37 +1409,53 @@
                 // Reset button
                 fetchBtn.disabled = false;
                 fetchBtn.innerHTML = '<i class="fas fa-download"></i> Fetch Product Data';
+                
+                // Hide skeleton loader
+                const skeletonLoader = document.getElementById('skeleton-loader');
+                if (skeletonLoader) {
+                    skeletonLoader.classList.remove('active');
+                }
             }
         }
         
         function fillListingForm(amazonData) {
+            console.log('Filling form with Amazon data:', amazonData);
+            
             // Fill title (ensure it's 80 characters or less)
             const titleInput = document.getElementById('listing-title');
-            titleInput.value = amazonData.title;
+            if (amazonData.title) {
+                titleInput.value = amazonData.title.substring(0, 80);
+                console.log('Set title:', titleInput.value);
+            }
             
             // Fill price
-            if (amazonData.price) {
-                const priceInput = document.getElementById('listing-price');
+            const priceInput = document.getElementById('listing-price');
+            if (priceInput && amazonData.price !== null && amazonData.price !== undefined) {
                 priceInput.value = amazonData.price;
+                console.log('Set price:', priceInput.value);
             }
             
             // Fill images (join URLs with commas)
-            if (amazonData.images && amazonData.images.length > 0) {
-                const imagesInput = document.getElementById('listing-images');
+            const imagesInput = document.getElementById('listing-images');
+            if (imagesInput && amazonData.images && amazonData.images.length > 0) {
                 imagesInput.value = amazonData.images.join(', ');
+                console.log('Set images:', amazonData.images.length, 'images');
             }
             
             // Fill description
-            if (amazonData.description) {
-                const descInput = document.getElementById('listing-desc');
+            const descInput = document.getElementById('listing-desc');
+            if (descInput && amazonData.description) {
                 descInput.value = amazonData.description;
+                console.log('Set description, length:', amazonData.description.length);
             }
             
             // Auto-generate SKU based on title
             const skuInput = document.getElementById('listing-sku');
-            if (!skuInput.value) {
-                const sku = 'AMZ-' + amazonData.title.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10).toUpperCase() + '-' + Date.now().toString().slice(-6);
+            if (!skuInput.value && amazonData.title) {
+                const cleanTitle = amazonData.title.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10).toUpperCase();
+                const sku = 'AMZ-' + (cleanTitle || 'PROD') + '-' + Date.now().toString().slice(-6);
                 skuInput.value = sku;
+                console.log('Generated SKU:', skuInput.value);
             }
             
             // Set default quantity if not set
@@ -1390,16 +1464,30 @@
                 qtyInput.value = '1';
             }
             
+            // Set default category if not set
+            const categoryInput = document.getElementById('listing-category');
+            if (!categoryInput.value) {
+                categoryInput.value = '182094'; // Default to Cell Phones & Accessories
+            }
+            
+            // Fill item specifics if available
+            if (amazonData.specifics && Object.keys(amazonData.specifics).length > 0) {
+                console.log('Item specifics:', amazonData.specifics);
+                // Could add UI elements to display specifics
+            }
+            
             // Visual feedback - briefly highlight filled fields
-            const filledFields = [titleInput, document.getElementById('listing-price'), document.getElementById('listing-images'), document.getElementById('listing-desc')];
+            const filledFields = [titleInput, priceInput, imagesInput, descInput].filter(field => field && field.value);
             filledFields.forEach(field => {
-                if (field.value) {
-                    field.style.background = '#e8f5e8';
-                    setTimeout(() => {
-                        field.style.background = '';
-                    }, 2000);
-                }
+                field.style.transition = 'background-color 0.3s';
+                field.style.backgroundColor = '#e8f5e8';
+                setTimeout(() => {
+                    field.style.backgroundColor = '';
+                }, 2000);
             });
+            
+            // Scroll to form to show filled data
+            document.getElementById('listing-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
         
         function showFetchStatus(message, type) {
