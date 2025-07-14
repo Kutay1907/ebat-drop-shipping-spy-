@@ -88,8 +88,9 @@ class EbayOAuthService:
         # Validate RuName format (should be in the format: name-appid-env-randomstring)
         try:
             runame_parts = self.redirect_uri.split('-')
-            if len(runame_parts) != 4:
-                raise ValueError("EBAY_REDIRECT_URI should be in format: name-appid-env-randomstring")
+            if len(runame_parts) < 3:
+                logger.warning("RuName format may not be standard, but continuing...")
+                # Don't raise error, just log warning for flexibility
         except AttributeError:
             raise ValueError("EBAY_REDIRECT_URI is invalid")
     

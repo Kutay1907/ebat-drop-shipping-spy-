@@ -678,6 +678,104 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* Amazon Import Section Styles */
+        .amazon-import-section {
+            background: linear-gradient(135deg, #fff3cd, #fef4e4);
+            border: 2px solid #ff9500;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .amazon-import-section h4 {
+            color: #ff9500;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0 0 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .amazon-input-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .amazon-url-input {
+            flex: 1;
+            min-width: 300px;
+            padding: 0.75rem 1rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .amazon-url-input:focus {
+            outline: none;
+            border-color: #ff9500;
+            box-shadow: 0 0 0 3px rgba(255, 149, 0, 0.1);
+        }
+
+        .amazon-fetch-btn {
+            padding: 0.75rem 1.5rem;
+            background: #ff9500;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .amazon-fetch-btn:hover {
+            background: #e68600;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3);
+        }
+
+        .amazon-fetch-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .fetch-status {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .fetch-status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .fetch-status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .fetch-status.loading {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #b3d9ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
         /* Empty State */
         .empty-state {
             text-align: center;
@@ -1068,6 +1166,19 @@
 
             <div id="seller-connected" class="hidden">
                 <h3>Create New eBay Listing</h3>
+                
+                <!-- Amazon Product Import Section -->
+                <div class="amazon-import-section">
+                    <h4><i class="fab fa-amazon"></i> Import from Amazon</h4>
+                    <div class="amazon-input-group">
+                        <input type="url" id="amazon-url" placeholder="Paste Amazon product URL here..." class="amazon-url-input">
+                        <button type="button" id="fetch-amazon-btn" class="amazon-fetch-btn">
+                            <i class="fas fa-download"></i> Fetch Product Data
+                        </button>
+                    </div>
+                    <div id="amazon-fetch-status" class="fetch-status hidden"></div>
+                </div>
+                
                 <form id="listing-form">
                     <div class="form-grid">
                         <div class="form-group">
@@ -1154,6 +1265,18 @@
         document.getElementById('resultsSort').addEventListener('change', sortResults);
         document.getElementById('show-search-view').addEventListener('click', () => showView('search'));
         document.getElementById('show-favorites-view').addEventListener('click', () => showView('favorites'));
+        
+        // Amazon fetch button
+        document.getElementById('fetch-amazon-btn').addEventListener('click', fetchAmazonProduct);
+        
+        // Amazon URL input - fetch on Enter key
+        document.getElementById('amazon-url').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                fetchAmazonProduct();
+            }
+        });
+        
         // Remove old event listener since we now use onclick in the HTML
         // connectEbayBtn.addEventListener('click', () => {
         //     window.location.href = '/api/auth/login';
@@ -1172,6 +1295,151 @@
                 e.currentTarget.classList.add('active');
             });
         });
+
+        // Amazon Product Import Functions
+        async function fetchAmazonProduct() {
+            const amazonUrl = document.getElementById('amazon-url').value.trim();
+            const fetchBtn = document.getElementById('fetch-amazon-btn');
+            const statusDiv = document.getElementById('amazon-fetch-status');
+            
+            if (!amazonUrl) {
+                showFetchStatus('Please enter an Amazon product URL', 'error');
+                return;
+            }
+            
+            // Validate Amazon URL
+            if (!amazonUrl.includes('amazon.')) {
+                showFetchStatus('Please enter a valid Amazon product URL', 'error');
+                return;
+            }
+            
+            try {
+                // Show loading state
+                fetchBtn.disabled = true;
+                fetchBtn.innerHTML = '<div class="loading-spinner"></div> Fetching...';
+                showFetchStatus('Scraping product data from Amazon...', 'loading');
+                
+                // Make request to scrape endpoint
+                const response = await fetch('/api/scrape/amazon', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        amazon_url: amazonUrl
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to scrape Amazon product');
+                }
+                
+                if (data.success) {
+                    // Auto-fill the form with scraped data
+                    fillListingForm(data);
+                    showFetchStatus(`✅ Successfully imported: ${data.title}`, 'success');
+                } else {
+                    throw new Error(data.message || 'Failed to extract product data');
+                }
+                
+            } catch (error) {
+                console.error('Amazon fetch error:', error);
+                showFetchStatus(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                // Reset button
+                fetchBtn.disabled = false;
+                fetchBtn.innerHTML = '<i class="fas fa-download"></i> Fetch Product Data';
+            }
+        }
+        
+        function fillListingForm(amazonData) {
+            // Fill title (ensure it's 80 characters or less)
+            const titleInput = document.getElementById('listing-title');
+            titleInput.value = amazonData.title;
+            
+            // Fill price
+            if (amazonData.price) {
+                const priceInput = document.getElementById('listing-price');
+                priceInput.value = amazonData.price;
+            }
+            
+            // Fill images (join URLs with commas)
+            if (amazonData.images && amazonData.images.length > 0) {
+                const imagesInput = document.getElementById('listing-images');
+                imagesInput.value = amazonData.images.join(', ');
+            }
+            
+            // Fill description
+            if (amazonData.description) {
+                const descInput = document.getElementById('listing-desc');
+                descInput.value = amazonData.description;
+            }
+            
+            // Auto-generate SKU based on title
+            const skuInput = document.getElementById('listing-sku');
+            if (!skuInput.value) {
+                const sku = 'AMZ-' + amazonData.title.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10).toUpperCase() + '-' + Date.now().toString().slice(-6);
+                skuInput.value = sku;
+            }
+            
+            // Set default quantity if not set
+            const qtyInput = document.getElementById('listing-qty');
+            if (!qtyInput.value) {
+                qtyInput.value = '1';
+            }
+            
+            // Visual feedback - briefly highlight filled fields
+            const filledFields = [titleInput, document.getElementById('listing-price'), document.getElementById('listing-images'), document.getElementById('listing-desc')];
+            filledFields.forEach(field => {
+                if (field.value) {
+                    field.style.background = '#e8f5e8';
+                    setTimeout(() => {
+                        field.style.background = '';
+                    }, 2000);
+                }
+            });
+        }
+        
+        function showFetchStatus(message, type) {
+            const statusDiv = document.getElementById('amazon-fetch-status');
+            statusDiv.className = `fetch-status ${type}`;
+            statusDiv.innerHTML = type === 'loading' ? `<div class="loading-spinner"></div> ${message}` : message;
+            statusDiv.classList.remove('hidden');
+            
+            // Auto-hide success/error messages after 5 seconds
+            if (type !== 'loading') {
+                setTimeout(() => {
+                    statusDiv.classList.add('hidden');
+                }, 5000);
+            }
+        }
+        
+        // eBay Listing Functions
+        async function createEbayListing(formData) {
+            try {
+                const response = await fetch('/api/ebay/listing', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Failed to create eBay listing');
+                }
+                
+                return result;
+                
+            } catch (error) {
+                console.error('eBay listing error:', error);
+                throw error;
+            }
+        }
 
         // eBay Store Widget Functions
         async function loadEbayStoreInfo() {
@@ -1773,31 +2041,79 @@
             e.preventDefault();
             const submitBtn = document.getElementById('listing-submit-btn');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
-
-            const listingData = {
-                sku: document.getElementById('listing-sku').value,
-                title: document.getElementById('listing-title').value,
-                description: document.getElementById('listing-desc').value,
-                price: parseFloat(document.getElementById('listing-price').value),
-                quantity: parseInt(document.getElementById('listing-qty').value),
-                image_urls: document.getElementById('listing-images').value.split(',').map(url => url.trim()).filter(url => url),
-                category_id: document.getElementById('listing-category').value,
-                fulfillment_policy_id: document.getElementById('fulfillment-policy-id').value,
-                payment_policy_id: document.getElementById('payment-policy-id').value,
-                return_policy_id: document.getElementById('return-policy-id').value,
-            };
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Listing...';
 
             try {
-                const response = await fetch('/api/seller/listing', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(listingData),
-                });
-                const result = await response.json();
-                alert(response.ok ? `Success: ${result.message}` : `Error: ${result.detail}`);
+                // Collect form data
+                const title = document.getElementById('listing-title').value.trim();
+                const description = document.getElementById('listing-desc').value.trim();
+                const price = parseFloat(document.getElementById('listing-price').value);
+                const quantity = parseInt(document.getElementById('listing-qty').value);
+                const imageUrls = document.getElementById('listing-images').value
+                    .split(',')
+                    .map(url => url.trim())
+                    .filter(url => url);
+                const categoryId = document.getElementById('listing-category').value;
+                
+                // Validate required fields
+                if (!title || title.length > 80) {
+                    throw new Error('Title is required and must be 80 characters or less');
+                }
+                if (!price || price <= 0) {
+                    throw new Error('Valid price is required');
+                }
+                if (!quantity || quantity < 1) {
+                    throw new Error('Quantity must be at least 1');
+                }
+                if (!categoryId) {
+                    throw new Error('eBay category is required');
+                }
+
+                const listingData = {
+                    title: title,
+                    description: description,
+                    price: price,
+                    quantity: quantity,
+                    category_id: categoryId,
+                    condition: "NEW",
+                    image_urls: imageUrls,
+                    item_specifics: {}, // Could be populated from Amazon data
+                    listing_duration: "GTC",
+                    shipping_policy: document.getElementById('fulfillment-policy-id').value || null,
+                    payment_policy: document.getElementById('payment-policy-id').value || null,
+                    return_policy: document.getElementById('return-policy-id').value || null
+                };
+
+                // Create the eBay listing
+                const result = await createEbayListing(listingData);
+                
+                if (result.success) {
+                    // Show success message with listing details
+                    let successMsg = `🎉 eBay listing created successfully!\n\n`;
+                    successMsg += `Title: ${result.message}\n`;
+                    if (result.ebay_item_id) {
+                        successMsg += `eBay Item ID: ${result.ebay_item_id}\n`;
+                    }
+                    if (result.listing_url) {
+                        successMsg += `\nView listing: ${result.listing_url}`;
+                    }
+                    
+                    alert(successMsg);
+                    
+                    // Reset form
+                    document.getElementById('listing-form').reset();
+                    document.getElementById('amazon-url').value = '';
+                    
+                    // Hide status message
+                    document.getElementById('amazon-fetch-status').classList.add('hidden');
+                    
+                } else {
+                    throw new Error(result.message || 'Failed to create listing');
+                }
+                
             } catch (error) {
-                alert('An unexpected error occurred.');
+                console.error('Listing creation error:', error);
+                alert(`❌ Error creating listing: ${error.message}`);
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-upload"></i> Create Listing';

@@ -14,6 +14,8 @@ from app.search_routes import router as search_router
 from app.debug_routes import router as debug_router
 from app.favorites_routes import router as favorites_router
 from app.listing_routes import router as listing_router
+from app.routes.scrape_routes import router as scrape_router
+from app.routes.ebay_listing_routes import router as ebay_listing_router
 from .database import engine, Base, get_db
 from . import crud, models, security
 from .ebay_oauth_service import ebay_oauth
@@ -40,6 +42,8 @@ app.include_router(search_router)
 app.include_router(debug_router)
 app.include_router(favorites_router)
 app.include_router(listing_router)
+app.include_router(scrape_router)
+app.include_router(ebay_listing_router)
 
 # --- eBay OAuth Routes ---
 
