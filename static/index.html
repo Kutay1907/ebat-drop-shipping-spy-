@@ -88,13 +88,177 @@
             background: var(--hover-bg);
         }
 
-        .premium-badge {
-            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        .ebay-store-widget {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            background: white;
+            border: 2px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            max-width: 250px;
+        }
+
+        .ebay-store-widget:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        .ebay-store-widget.connected {
+            border-color: var(--success-color);
+            background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+        }
+
+        .ebay-store-widget.disconnected {
+            border-color: var(--warning-color);
+            background: linear-gradient(135deg, #fffbeb, #fef3c7);
+        }
+
+        .ebay-logo {
+            width: 24px;
+            height: 24px;
+            background: #e53238;
             color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.875rem;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+
+        .store-info {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .store-name {
             font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .store-status {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .store-status.connected {
+            color: var(--success-color);
+        }
+
+        .store-status.disconnected {
+            color: var(--warning-color);
+        }
+
+        .store-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            padding: 1rem;
+            min-width: 280px;
+            z-index: 1000;
+            display: none;
+            margin-top: 0.5rem;
+        }
+
+        .store-dropdown.show {
+            display: block;
+        }
+
+        .dropdown-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 0.75rem;
+        }
+
+        .dropdown-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .store-details {
+            space: 0.5rem;
+        }
+
+        .store-detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.25rem 0;
+            font-size: 0.875rem;
+        }
+
+        .store-detail-label {
+            color: var(--text-secondary);
+        }
+
+        .store-detail-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .store-detail-value.warning {
+            color: var(--warning-color);
+        }
+
+        .connect-button, .disconnect-button {
+            width: 100%;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 0.75rem;
+        }
+
+        .connect-button {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .connect-button:hover {
+            background: var(--primary-dark);
+        }
+
+        .disconnect-button {
+            background: var(--error-color);
+            color: white;
+        }
+
+        .disconnect-button:hover {
+            background: #dc2626;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         /* Main Container */
@@ -658,7 +822,37 @@
                 <a href="#" class="nav-link" onclick="showView('search')">Search</a>
                 <a href="#" class="nav-link" onclick="showView('favorites')">Favorites</a>
                 <a href="#" class="nav-link" onclick="showView('seller')">Seller Dashboard</a>
-                <span class="premium-badge">Premium</span>
+                
+                <!-- eBay Store Widget -->
+                <div class="ebay-store-widget disconnected" id="ebayStoreWidget" onclick="toggleStoreDropdown()">
+                    <div class="ebay-logo">eBay</div>
+                    <div class="store-info">
+                        <div class="store-name" id="storeName">Connect eBay</div>
+                        <div class="store-status disconnected" id="storeStatus">Not connected</div>
+                    </div>
+                    <i class="fas fa-chevron-down" style="color: var(--text-secondary); font-size: 0.75rem;"></i>
+                    
+                    <!-- Dropdown -->
+                    <div class="store-dropdown" id="storeDropdown">
+                        <div class="dropdown-header">
+                            <div class="ebay-logo">eBay</div>
+                            <div class="dropdown-title">eBay Account</div>
+                        </div>
+                        
+                        <div id="storeDetails">
+                            <!-- Content will be dynamically loaded -->
+                            <div class="store-detail-item">
+                                <span class="store-detail-label">Status:</span>
+                                <span class="store-detail-value" id="dropdownStatus">Not connected</span>
+                            </div>
+                        </div>
+                        
+                        <button class="connect-button" id="connectButton" onclick="connectEbay()">
+                            <i class="fas fa-link"></i>
+                            Connect eBay Account
+                        </button>
+                    </div>
+                </div>
             </nav>
         </div>
     </header>
@@ -930,6 +1124,8 @@
         let searchResults = [];
         let favorites = [];
         let isSearching = false;
+        let ebayStoreInfo = null;
+        let isStoreDropdownOpen = false;
 
         // DOM elements
         const searchForm = document.getElementById('searchForm');
@@ -976,6 +1172,202 @@
                 e.currentTarget.classList.add('active');
             });
         });
+
+        // eBay Store Widget Functions
+        async function loadEbayStoreInfo() {
+            try {
+                const response = await fetch('/api/ebay/store-info');
+                const data = await response.json();
+                ebayStoreInfo = data;
+                updateStoreWidget(data);
+            } catch (error) {
+                console.error('Error loading eBay store info:', error);
+                updateStoreWidget({ is_connected: false, message: 'Error loading store info' });
+            }
+        }
+
+        function updateStoreWidget(storeData) {
+            const widget = document.getElementById('ebayStoreWidget');
+            const storeName = document.getElementById('storeName');
+            const storeStatus = document.getElementById('storeStatus');
+            const connectButton = document.getElementById('connectButton');
+            const dropdownStatus = document.getElementById('dropdownStatus');
+            
+            if (storeData.is_connected) {
+                // Connected state
+                widget.className = 'ebay-store-widget connected';
+                
+                if (storeData.store_info && storeData.store_info.store_name) {
+                    storeName.textContent = storeData.store_info.store_name;
+                    storeStatus.textContent = 'Store Connected';
+                } else if (storeData.user_profile && storeData.user_profile.user_id) {
+                    storeName.textContent = `User ${storeData.user_profile.user_id}`;
+                    storeStatus.textContent = 'eBay Connected';
+                } else {
+                    storeName.textContent = 'eBay Account';
+                    storeStatus.textContent = 'Connected';
+                }
+                
+                storeStatus.className = 'store-status connected';
+                dropdownStatus.textContent = 'Connected';
+                dropdownStatus.className = 'store-detail-value connected';
+                
+                // Update connect button to disconnect
+                connectButton.innerHTML = '<i class="fas fa-unlink"></i> Disconnect Account';
+                connectButton.className = 'disconnect-button';
+                connectButton.onclick = disconnectEbay;
+                
+            } else {
+                // Disconnected state
+                widget.className = 'ebay-store-widget disconnected';
+                storeName.textContent = 'Connect eBay';
+                storeStatus.textContent = 'Not connected';
+                storeStatus.className = 'store-status disconnected';
+                dropdownStatus.textContent = 'Not connected';
+                dropdownStatus.className = 'store-detail-value disconnected';
+                
+                connectButton.innerHTML = '<i class="fas fa-link"></i> Connect eBay Account';
+                connectButton.className = 'connect-button';
+                connectButton.onclick = connectEbay;
+            }
+            
+            updateStoreDetails(storeData);
+        }
+
+        function updateStoreDetails(storeData) {
+            const storeDetails = document.getElementById('storeDetails');
+            
+            let detailsHTML = `
+                <div class="store-detail-item">
+                    <span class="store-detail-label">Status:</span>
+                    <span class="store-detail-value ${storeData.is_connected ? 'connected' : 'disconnected'}" id="dropdownStatus">
+                        ${storeData.is_connected ? 'Connected' : 'Not connected'}
+                    </span>
+                </div>`;
+            
+            if (storeData.is_connected) {
+                if (storeData.user_profile) {
+                    if (storeData.user_profile.user_id) {
+                        detailsHTML += `
+                            <div class="store-detail-item">
+                                <span class="store-detail-label">User ID:</span>
+                                <span class="store-detail-value">${storeData.user_profile.user_id}</span>
+                            </div>`;
+                    }
+                    if (storeData.user_profile.email) {
+                        detailsHTML += `
+                            <div class="store-detail-item">
+                                <span class="store-detail-label">Email:</span>
+                                <span class="store-detail-value">${storeData.user_profile.email}</span>
+                            </div>`;
+                    }
+                }
+                
+                if (storeData.store_info) {
+                    detailsHTML += `
+                        <div class="store-detail-item">
+                            <span class="store-detail-label">Store Name:</span>
+                            <span class="store-detail-value">${storeData.store_info.store_name || 'N/A'}</span>
+                        </div>`;
+                    
+                    if (storeData.store_info.store_type) {
+                        detailsHTML += `
+                            <div class="store-detail-item">
+                                <span class="store-detail-label">Store Type:</span>
+                                <span class="store-detail-value">${storeData.store_info.store_type}</span>
+                            </div>`;
+                    }
+                }
+                
+                if (storeData.token_expires_at) {
+                    const expiryDate = new Date(storeData.token_expires_at);
+                    const isExpiringSoon = (expiryDate - new Date()) < (24 * 60 * 60 * 1000); // 24 hours
+                    
+                    detailsHTML += `
+                        <div class="store-detail-item">
+                            <span class="store-detail-label">Token Expires:</span>
+                            <span class="store-detail-value ${isExpiringSoon ? 'warning' : ''}">
+                                ${expiryDate.toLocaleDateString()}
+                            </span>
+                        </div>`;
+                }
+            }
+            
+            storeDetails.innerHTML = detailsHTML;
+        }
+
+        function toggleStoreDropdown() {
+            const dropdown = document.getElementById('storeDropdown');
+            isStoreDropdownOpen = !isStoreDropdownOpen;
+            
+            if (isStoreDropdownOpen) {
+                dropdown.classList.add('show');
+                // Refresh store info when dropdown opens
+                loadEbayStoreInfo();
+            } else {
+                dropdown.classList.remove('show');
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const widget = document.getElementById('ebayStoreWidget');
+            const dropdown = document.getElementById('storeDropdown');
+            
+            if (!widget.contains(event.target) && isStoreDropdownOpen) {
+                dropdown.classList.remove('show');
+                isStoreDropdownOpen = false;
+            }
+        });
+
+        async function connectEbay() {
+            try {
+                // Show loading state
+                const connectButton = document.getElementById('connectButton');
+                const originalHTML = connectButton.innerHTML;
+                connectButton.innerHTML = '<div class="loading-spinner"></div> Connecting...';
+                connectButton.disabled = true;
+                
+                // Redirect to eBay OAuth
+                window.location.href = '/connect/ebay';
+                
+            } catch (error) {
+                console.error('Error connecting to eBay:', error);
+                alert('Failed to connect to eBay. Please try again.');
+                
+                // Reset button
+                const connectButton = document.getElementById('connectButton');
+                connectButton.innerHTML = '<i class="fas fa-link"></i> Connect eBay Account';
+                connectButton.disabled = false;
+            }
+        }
+
+        async function disconnectEbay() {
+            if (!confirm('Are you sure you want to disconnect your eBay account? This will remove all stored tokens and you will need to reconnect.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/ebay/disconnect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    // Refresh the widget
+                    await loadEbayStoreInfo();
+                    alert('eBay account disconnected successfully.');
+                } else {
+                    throw new Error('Failed to disconnect');
+                }
+                
+            } catch (error) {
+                console.error('Error disconnecting eBay account:', error);
+                alert('Failed to disconnect eBay account. Please try again.');
+            }
+        }
 
         // View Management
         async function showView(viewName) {
@@ -1419,6 +1811,19 @@
             document.getElementById('minSellerFeedback').addEventListener('input', validateFeedbackInputs);
             document.getElementById('maxSellerFeedback').addEventListener('input', validateFeedbackInputs);
             await fetchFavorites();
+            
+            // Check for auth status in URL (user returning from eBay OAuth)
+            const urlParams = new URLSearchParams(window.location.search);
+            const authStatus = urlParams.get('auth_status');
+            if (authStatus === 'success') {
+                // Show success message and remove the parameter from URL
+                alert('✅ eBay account connected successfully!');
+                // Clean up URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            
+            // Load eBay store information
+            await loadEbayStoreInfo();
             showView('search');
         });
     </script>

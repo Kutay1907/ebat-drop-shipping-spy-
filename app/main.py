@@ -153,7 +153,9 @@ async def auth_ebay_callback(
             )
 
         # Store encrypted tokens using the OAuth service
-        ebay_oauth.store_user_tokens(db, db_user.id, token_data)
+        # Type assertion: db_user.id is an int value from database record, not Column
+        user_id: int = db_user.id  # type: ignore
+        ebay_oauth.store_user_tokens(db, user_id, token_data)
 
         logger.info(f"Successfully connected eBay account for user: {user_email}")
         return RedirectResponse(url="/?auth_status=success")
@@ -374,6 +376,100 @@ async def get_ebay_profile(db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=500,
             detail="Failed to fetch eBay profile"
+        )
+
+@app.get("/api/ebay/store-info", tags=["ebay-api"])
+async def get_ebay_store_info(db: Session = Depends(get_db)):
+    """
+    Get eBay store information for the authenticated user.
+    Returns store details, user profile, and connection status.
+    """
+    try:
+        user_id = 1  # In production, get from session/JWT
+        
+        # Check if user is connected
+        if not ebay_oauth.is_user_connected(db, user_id):
+            return {
+                "is_connected": False,
+                "store_info": None,
+                "user_profile": None,
+                "message": "eBay account not connected"
+            }
+
+        # Get user's eBay client
+        from app.ebay_api_client import get_user_ebay_client
+        client = get_user_ebay_client(user_id)
+        
+        store_info = {}
+        user_profile = {}
+        
+        try:
+            # Get account information
+            account_response = await client.call_api("GET", "/sell/account/v1/account")
+            if account_response:
+                user_profile = {
+                    "user_id": account_response.get("userId"),
+                    "email": account_response.get("email"),
+                    "registration_date": account_response.get("registrationDate"),
+                    "status": account_response.get("status")
+                }
+        except Exception as e:
+            logger.warning(f"Could not fetch account info: {str(e)}")
+        
+        try:
+            # Try to get store information (if user has an eBay store)
+            store_response = await client.call_api("GET", "/sell/account/v1/account/store")
+            if store_response:
+                store_info = {
+                    "store_name": store_response.get("storeName"),
+                    "store_url": store_response.get("storeUrl"),
+                    "store_type": store_response.get("storeType"),
+                    "subscription_level": store_response.get("subscriptionLevel")
+                }
+        except Exception as e:
+            logger.info(f"User may not have an eBay store: {str(e)}")
+            # This is normal - not all users have eBay stores
+            store_info = None
+        
+        # Get token status
+        token_record = ebay_oauth.get_stored_token(db, user_id)
+        token_expires_at = token_record.access_token_expires_at.isoformat() if token_record else None
+        
+        return {
+            "is_connected": True,
+            "store_info": store_info,
+            "user_profile": user_profile,
+            "token_expires_at": token_expires_at,
+            "message": "Successfully retrieved eBay information"
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching eBay store info: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch eBay store information"
+        )
+
+@app.post("/api/ebay/disconnect", tags=["ebay-api"])
+async def disconnect_ebay_account(db: Session = Depends(get_db)):
+    """
+    Disconnect the user's eBay account by removing stored tokens.
+    """
+    try:
+        user_id = 1  # In production, get from session/JWT
+        
+        ebay_oauth.disconnect_user(db, user_id)
+        
+        return {
+            "status": "success",
+            "message": "eBay account disconnected successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error disconnecting eBay account: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to disconnect eBay account"
         )
 
 # --- Static Routes ---
