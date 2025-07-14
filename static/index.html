@@ -979,6 +979,31 @@
             border-radius: 8px;
             border: 2px solid var(--border-color);
         }
+
+        .scraped-specifics {
+            margin-top: 1rem;
+            background: var(--hover-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .specific-item {
+            font-size: 0.875rem;
+        }
+
+        .specific-item-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            display: block;
+        }
+
+        .specific-item-value {
+            color: var(--text-secondary);
+        }
     </style>
 </head>
 <body>
@@ -1261,6 +1286,7 @@
                 <div id="scraped-data-preview" class="hidden">
                     <h4>Scraped Product Data</h4>
                     <div id="scraped-images-preview" class="scraped-images"></div>
+                    <div id="scraped-specifics-preview" class="scraped-specifics"></div>
                 </div>
 
                 <form id="listing-form" class="hidden">
@@ -1570,7 +1596,7 @@
             const disconnectBtn = document.getElementById('disconnectButton');
 
             try {
-                const response = await fetch('/get_ebay_store_info');
+                const response = await fetch('/api/ebay/store-info');
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
                     throw new Error(errorData.detail || 'Failed to fetch eBay status');
@@ -2329,8 +2355,21 @@
                             img.alt = "Scraped product image";
                             imagesPreviewDiv.appendChild(img);
                         });
-                        previewDiv.classList.remove('hidden');
                     }
+
+                    // Populate and show specifics
+                    const specificsPreviewDiv = document.getElementById('scraped-specifics-preview');
+                    specificsPreviewDiv.innerHTML = '';
+                    if (data.specifics && Object.keys(data.specifics).length > 0) {
+                        for (const [key, value] of Object.entries(data.specifics)) {
+                            const item = document.createElement('div');
+                            item.className = 'specific-item';
+                            item.innerHTML = `<span class="specific-item-label">${key}:</span> <span class="specific-item-value">${value}</span>`;
+                            specificsPreviewDiv.appendChild(item);
+                        }
+                    }
+
+                    previewDiv.classList.remove('hidden');
 
                     listingForm.classList.remove('hidden');
                 } else {
