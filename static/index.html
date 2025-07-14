@@ -193,7 +193,9 @@
         }
 
         .store-details {
-            space: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
         }
 
         .store-detail-item {
@@ -550,6 +552,7 @@
             margin-bottom: 0.75rem;
             display: -webkit-box;
             -webkit-line-clamp: 2;
+            line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
             line-height: 1.4;
@@ -952,6 +955,30 @@
             font-size: 1rem;
             margin-top: 1rem;
         }
+
+        .status-message.error {
+            color: var(--error-color);
+            background: #fff1f2;
+        }
+
+        .scraped-images {
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+            padding: 1rem;
+            background: var(--hover-bg);
+            border-radius: 8px;
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .scraped-images img {
+            height: 100px;
+            width: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+        }
     </style>
 </head>
 <body>
@@ -1221,7 +1248,7 @@
                             <i class="fas fa-download"></i> Fetch Product Data
                         </button>
                     </div>
-                    <div id="amazon-fetch-status" class="fetch-status hidden"></div>
+                    <div id="amazon-fetch-status" class="status-message hidden"></div>
                     
                     <!-- Skeleton Loader -->
                     <div id="skeleton-loader" class="skeleton-loader">
@@ -1231,7 +1258,12 @@
                     </div>
                 </div>
                 
-                <form id="listing-form">
+                <div id="scraped-data-preview" class="hidden">
+                    <h4>Scraped Product Data</h4>
+                    <div id="scraped-images-preview" class="scraped-images"></div>
+                </div>
+
+                <form id="listing-form" class="hidden">
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="listing-title">Title</label>
@@ -1492,7 +1524,7 @@
         
         function showFetchStatus(message, type) {
             const statusDiv = document.getElementById('amazon-fetch-status');
-            statusDiv.className = `fetch-status ${type}`;
+            statusDiv.className = `status-message ${type}`;
             statusDiv.innerHTML = type === 'loading' ? `<div class="loading-spinner"></div> ${message}` : message;
             statusDiv.classList.remove('hidden');
             
@@ -1531,14 +1563,25 @@
 
         // eBay Store Widget Functions
         async function loadEbayStoreInfo() {
+            const widget = document.getElementById('ebayStoreWidget');
+            const storeNameEl = document.getElementById('storeName');
+            const storeStatusEl = document.getElementById('storeStatus');
+            const connectBtn = document.getElementById('connectButton');
+            const disconnectBtn = document.getElementById('disconnectButton');
+
             try {
-                const response = await fetch('/api/ebay/store-info');
+                const response = await fetch('/get_ebay_store_info');
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || 'Failed to fetch eBay status');
+                }
+                
                 const data = await response.json();
-                ebayStoreInfo = data;
                 updateStoreWidget(data);
+
             } catch (error) {
                 console.error('Error loading eBay store info:', error);
-                updateStoreWidget({ is_connected: false, message: 'Error loading store info' });
+                updateStoreWidget({ is_connected: false, message: 'Error: Could not connect to backend.' });
             }
         }
 
@@ -1548,46 +1591,69 @@
             const storeStatus = document.getElementById('storeStatus');
             const connectButton = document.getElementById('connectButton');
             const dropdownStatus = document.getElementById('dropdownStatus');
+            const storeDetails = document.getElementById('storeDetails');
             
             if (storeData.is_connected) {
-                // Connected state
                 widget.className = 'ebay-store-widget connected';
-                
-                if (storeData.store_info && storeData.store_info.store_name) {
-                    storeName.textContent = storeData.store_info.store_name;
-                    storeStatus.textContent = 'Store Connected';
-                } else if (storeData.user_profile && storeData.user_profile.user_id) {
-                    storeName.textContent = `User ${storeData.user_profile.user_id}`;
-                    storeStatus.textContent = 'eBay Connected';
-                } else {
-                    storeName.textContent = 'eBay Account';
-                    storeStatus.textContent = 'Connected';
-                }
-                
+                storeName.textContent = storeData.store_info?.store_name || storeData.user_profile?.user_id || 'eBay Account';
+                storeStatus.textContent = 'Connected';
                 storeStatus.className = 'store-status connected';
                 dropdownStatus.textContent = 'Connected';
                 dropdownStatus.className = 'store-detail-value connected';
-                
-                // Update connect button to disconnect
                 connectButton.innerHTML = '<i class="fas fa-unlink"></i> Disconnect Account';
                 connectButton.className = 'disconnect-button';
                 connectButton.onclick = disconnectEbay;
-                
+
+                let detailsHtml = `
+                    <div class="store-detail-item">
+                        <span class="store-detail-label">User ID:</span>
+                        <span class="store-detail-value">${storeData.user_profile?.user_id || 'N/A'}</span>
+                    </div>`;
+                if (storeData.store_info?.store_name) {
+                    detailsHtml += `
+                    <div class="store-detail-item">
+                        <span class="store-detail-label">Store Name:</span>
+                        <span class="store-detail-value">${storeData.store_info.store_name}</span>
+                    </div>`;
+                }
+                if (storeData.token_expires_at) {
+                     detailsHtml += `
+                    <div class="store-detail-item">
+                        <span class="store-detail-label">Token Expires:</span>
+                        <span class="store-detail-value">${new Date(storeData.token_expires_at).toLocaleString()}</span>
+                    </div>`;
+                }
+                storeDetails.innerHTML = detailsHtml;
+
             } else {
-                // Disconnected state
                 widget.className = 'ebay-store-widget disconnected';
                 storeName.textContent = 'Connect eBay';
                 storeStatus.textContent = 'Not connected';
                 storeStatus.className = 'store-status disconnected';
                 dropdownStatus.textContent = 'Not connected';
                 dropdownStatus.className = 'store-detail-value disconnected';
-                
                 connectButton.innerHTML = '<i class="fas fa-link"></i> Connect eBay Account';
                 connectButton.className = 'connect-button';
                 connectButton.onclick = connectEbay;
+                storeDetails.innerHTML = `<div class="store-detail-item"><span class="store-detail-value warning">Connect your account to enable listing features.</span></div>`;
             }
-            
-            updateStoreDetails(storeData);
+        }
+
+        function connectEbay() {
+            window.location.href = '/connect/ebay';
+        }
+
+        async function disconnectEbay() {
+            if (confirm('Are you sure you want to disconnect your eBay account?')) {
+                try {
+                    const response = await fetch('/api/ebay/disconnect', { method: 'POST' });
+                    if (!response.ok) throw new Error('Failed to disconnect');
+                    window.location.reload();
+                } catch (error) {
+                    console.error('Disconnect error:', error);
+                    alert('Failed to disconnect eBay account.');
+                }
+            }
         }
 
         function updateStoreDetails(storeData) {
@@ -2208,6 +2274,79 @@
             }
         }
 
+        async function handleFetchAmazonData() {
+            const urlInput = document.getElementById('amazon-url');
+            const fetchBtn = document.getElementById('fetch-amazon-data');
+            const statusDiv = document.getElementById('amazon-fetch-status');
+            const listingForm = document.getElementById('listing-form');
+            const previewDiv = document.getElementById('scraped-data-preview');
+            const imagesPreviewDiv = document.getElementById('scraped-images-preview');
+
+            const amazonUrl = urlInput.value.trim();
+            if (!amazonUrl) {
+                alert('Please enter an Amazon product URL.');
+                return;
+            }
+
+            fetchBtn.disabled = true;
+            fetchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
+            statusDiv.classList.remove('hidden', 'success', 'error');
+            statusDiv.textContent = 'Scraping Amazon page...';
+            listingForm.classList.add('hidden');
+            previewDiv.classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/scrape/amazon', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ amazon_url: amazonUrl }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to scrape data');
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    statusDiv.classList.add('success');
+                    statusDiv.textContent = `Success! Scraped: ${data.title.substring(0, 50)}...`;
+
+                    // Populate the form
+                    document.getElementById('listing-title').value = data.title || '';
+                    document.getElementById('listing-price').value = data.price || '';
+                    document.getElementById('listing-description').value = data.description || '';
+                    
+                    // Populate and show image previews
+                    imagesPreviewDiv.innerHTML = '';
+                    if(data.images && data.images.length > 0) {
+                        data.images.forEach(imgUrl => {
+                            const img = document.createElement('img');
+                            img.src = imgUrl;
+                            img.alt = "Scraped product image";
+                            imagesPreviewDiv.appendChild(img);
+                        });
+                        previewDiv.classList.remove('hidden');
+                    }
+
+                    listingForm.classList.remove('hidden');
+                } else {
+                    throw new Error(data.message || 'Scraping failed');
+                }
+
+            } catch (error) {
+                console.error('Amazon fetch error:', error);
+                statusDiv.classList.add('error');
+                statusDiv.textContent = `Error: ${error.message}`;
+            } finally {
+                fetchBtn.disabled = false;
+                fetchBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Fetch Data';
+            }
+        }
+
         // Initialize page
         document.addEventListener('DOMContentLoaded', async () => {
             searchInput.focus();
@@ -2229,6 +2368,9 @@
             // Load eBay store information
             await loadEbayStoreInfo();
             showView('search');
+
+            // Attach event listener for fetching Amazon data
+            document.getElementById('fetch-amazon-data').addEventListener('click', handleFetchAmazonData);
         });
     </script>
 </body>
